@@ -1,0 +1,23 @@
+#!/bin/bash
+real_path=`dirname $(readlink -f "$BASH_SOURCE")`
+
+# /etc/bash_completion.d/wh
+_wh_complete() {
+    local cur_word prev_word type_list
+   
+    # Get the current word and previous one
+    cur_word="${COMP_WORDS[COMP_CWORD]}"
+    prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+
+    COMPREPLY=() 
+    
+    # Create the completion word list, removing extension and 'wh-' prefix
+    cmd_list=$(ls -I wh $real_path/wh-scripts/wh-* | xargs -n1 basename | sed 's/wh-//; s/\..*$//')
+
+    # Generate possible matches and store them in the array 'COMPREPLY'
+    COMPREPLY=($(compgen -W "${cmd_list}" -- "${cur_word}"))
+
+    return 0
+}
+
+complete -F _wh_complete wh
