@@ -17,8 +17,8 @@ wh fpm-reload                      # restart PHP-FPM server
 wh deploy-script-forge-production  # runs script for production servers
 wh fpm-reload                      # restart detected php-fpm services
 wh hello-python                    # runs python test script
-wh nr-deploy-capture               # captures the Git commit information and write it to a JSON log file
-wh nr-deploy-forward               # forward deployment events from the webhook server to New Relic
+wh nr-deployment-capture           # capture git commit info and write it to a JSON log file
+wh nr-deployment-forward           # forward deployment events from the webhook server to New Relic (forge crontab task)
 wh post-receive-forge-staging      # runs script for staging servers
 wh python-update                   # occasionally update pyenv, python, and the python venv for our web-hosting scripts
 ```

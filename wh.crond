@@ -1,3 +1,4 @@
-# Publish detected code deployment markers to New Relic (every minute)
-* *  * * *   forge   wh hello
+MAILTO=""
 
+# Publish detected code deployment markers to New Relic (every minute)
+* *  * * *   forge   wh nr-deployment-forward
