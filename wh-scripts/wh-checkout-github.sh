@@ -25,6 +25,6 @@ fi
 
 
 # Checkout the latest commit of the specified branch (Hard-reset allows deployment of force-pushes)
-git fetch origin $BRANCH
-git checkout -f $BRANCH
-git reset --hard origin/$BRANCH
+git fetch origin $BRANCH 2>&1
+git checkout -f $BRANCH 2>&1
+git reset --hard origin/$BRANCH 2>&1

@@ -42,7 +42,9 @@ while [[ "$SEARCH_DIR" != "/" && "$SEARCH_DIR" != "." ]]; do
     if [[ -d "$SEARCH_DIR/.git" ]]; then
         export WH_PROJECT_DIR="$SEARCH_DIR"
         export WH_PROJECT_ENV="$SEARCH_DIR/.env"
-        export WH_APP_NAME=$(grep '^APP_NAME=' "$WH_PROJECT_ENV" | sed 's/.*=//' | sed 's/"//g')
+        if [[ -f "$WH_PROJECT_ENV" ]]; then
+            export WH_APP_NAME=$(grep '^APP_NAME=' "$WH_PROJECT_ENV" | sed 's/.*=//' | sed 's/"//g')
+        fi
         if [[ -f "$WH_PROJECT_DIR/artisan" ]]; then
             export WH_LARAVEL_DETECTED=true
         fi
