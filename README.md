@@ -29,6 +29,12 @@ wh fpm-reload                     # restart PHP-FPM server - useful for command-
 wh nr-deployment-capture          # capture git commit info and write it to a JSON log file
 wh nr-deployment-forward          # forward deployment events from the webhook server to New Relic (forge crontab task)
 
+# Docker deployment framework
+wh docker-summary                 # Show a summary of the docker projects and their nginx port mappings
+wh docker-deploy                  # Deploy (build + run) a docker container for current project
+wh docker-down                    # Stop the docker container for current project
+wh docker-get-context             # HELPER:  load and validate context of the current docker project (from the .env file)
+wh docker-copy-config             # HELPER:  copy docker configuration templates to current project
 ```
 
 Bash completion is also included - ie type:

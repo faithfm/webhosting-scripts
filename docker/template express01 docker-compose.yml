@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+    app:
+        image: "${APP_IMAGE_NAME}"
+        restart: always
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "${DOCKER_PORT}:${DOCKER_PORT}"
