@@ -35,6 +35,16 @@ wh docker-deploy                  # Deploy (build + run) a docker container for 
 wh docker-down                    # Stop the docker container for current project
 wh docker-get-context             # HELPER:  load and validate context of the current docker project (from the .env file)
 wh docker-copy-config             # HELPER:  copy docker configuration templates to current project
+wh docker-install                 # install or update docker
+
+# backup framework (using restic + resticprofile)
+wh bup                            # show list of backup snapshots
+wh bup-config                     # edit the backup configuration file
+wh bup-backup                     # perform a manual system backup (...but usually executed on a schudule)
+wh bup-reschedule                 # update the scheduler (after editing schedule times in the config file)
+wh bup-unlock                     # unlock a 'locked' resticprofile repository
+wh bup-install                    # install restic + resticprofile
+wh bup-selfupdate                 # perform a self-update of restic + resticprofile
 ```
 
 Bash completion is also included - ie type:
