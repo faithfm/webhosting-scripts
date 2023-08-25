@@ -9,25 +9,34 @@ An easy-to-maintain set of scripts for our web-hosting servers.
 Usage is simple:
 
 ```bash
-wh                                 # list available wh-script commands
-wh hello                           # runs the demo script
-wh update                          # update all scripts (ie: pull updates + re-install symlinks)
-wh show-env                        # show key environment variables that can be expected/used in all webhosting scripts
-wh fpm-reload                      # restart PHP-FPM server
-wh deploy-script-forge-production  # runs script for production servers
-wh fpm-reload                      # restart detected php-fpm services
-wh hello-python                    # runs python test script
-wh nr-deployment-capture           # capture git commit info and write it to a JSON log file
-wh nr-deployment-forward           # forward deployment events from the webhook server to New Relic (forge crontab task)
-wh post-receive-forge-staging      # runs script for staging servers
-wh python-update                   # occasionally update pyenv, python, and the python venv for our web-hosting scripts
+# basics
+wh                                # list available wh-script commands
+wh hello                          # basic hello world bash script
+wh hello-python                   # ditto  (python version)
+wh show-env                       # show key environment variables that can be expected/used in all webhosting scripts
+wh update                         # update all scripts (ie: pull updates + re-install symlinks)
+wh python-update                  # occasionally update pyenv, python, and the python venv for our web-hosting scripts
+
+# project checkout/update commands
+wh checkout-github                # checkout project from GitHub master
+wh checkout-PR                    # checkout project from a pull request
+wh checkout-PR-bare               # ditto... but for bare repos, allow project (working) directory to be specified
+
+# PHP/composer deployment
+wh composer-deploy                # deploy composer dependencies... (including extra steps for Forge projects)
+wh composer-deploy-sessions       # ditto - ...and delete SESSION data (for Laravel PRODUCTION projects)
+wh fpm-reload                     # restart PHP-FPM server - useful for command-line too
+wh nr-deployment-capture          # capture git commit info and write it to a JSON log file
+wh nr-deployment-forward          # forward deployment events from the webhook server to New Relic (forge crontab task)
+
 ```
 
 Bash completion is also included - ie type:
 
 ```bash
-  wh + [space] + [tab]  # will show available commands
-  wh hel + [tab]        # will probably auto-complete the `wh hello` command
+  wh + [space] + [tab]            # will show available commands
+  wh hel + [tab]                  # will probably auto-complete the `wh hello` command
+  wh + [enter]                    # will show list of available commands
 ```
 
 ## Installation
@@ -80,4 +89,12 @@ Be sure to set file permissions appropriately on development machine before push
 
 ```bash
 chmod 755 wh-scripts/wh-xyz.sh
+```
+
+To add python packages to our local venv environment (to be installed in our production environments:
+
+```bash
+source venv/bin/activate
+pip install mypackage
+pip freeze > requirements.txt
 ```
