@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# When called by a Forge application deploy script, this script will:
+# When called by a Laravel Forge application deploy script, this script will:
 #   - Checkout the latest commit of master branch (Hard-reset allows deployment of force-pushes)
-#   - Perform deployment tasks - ie: composer install, fpm reload, etc
 #
 # The Forge application deploy script should typically contain the following two simple lines:
 #   cd /home/username/site.com.au

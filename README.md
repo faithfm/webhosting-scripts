@@ -18,11 +18,12 @@ wh update                         # update all scripts (ie: pull updates + re-in
 wh python-update                  # occasionally update pyenv, python, and the python venv for our web-hosting scripts
 
 # project checkout/update commands
+#   [NOTE 1] below - Deployment README - additional info
 wh checkout-github                # checkout project from GitHub master
 wh checkout-PR                    # checkout project from a pull request
-wh checkout-PR-bare               # ditto... but for bare repos, allow project (working) directory to be specified
 
 # PHP/composer deployment
+#   [NOTE 1] below - Deployment README - additional info
 wh composer-deploy                # deploy composer dependencies... (including extra steps for Forge projects)
 wh composer-deploy-sessions       # ditto - ...and delete SESSION data (for Laravel PRODUCTION projects)
 wh fpm-reload                     # restart PHP-FPM server - useful for command-line too
@@ -30,6 +31,8 @@ wh nr-deployment-capture          # capture git commit info and write it to a JS
 wh nr-deployment-forward          # forward deployment events from the webhook server to New Relic (forge crontab task)
 
 # Docker deployment framework
+#   [NOTE 1] below - Deployment README - additional info
+#   [NOTE 2] below - How to deploy a containerised Express / Apollo GraphQL server site
 wh docker-summary                 # Show a summary of the docker projects and their nginx port mappings
 wh docker-deploy                  # Deploy (build + run) a docker container for current project
 wh docker-down                    # Stop the docker container for current project
@@ -46,6 +49,13 @@ wh bup-unlock                     # unlock a 'locked' resticprofile repository
 wh bup-install                    # install restic + resticprofile
 wh bup-selfupdate                 # perform a self-update of restic + resticprofile
 ```
+
+Many of these  web-hosting scripts are focused on deploying code updates to websites:
+
+> NOTE 1: For more details regarding code deployments see:  [README - deployment (checkout, composer, fpm-reload).md](<README - deployment (checkout, composer, fpm-reload).md>)
+
+> NOTE 2: How to deploy a containerised Express / Apollo GraphQL server site see: [docker project deployment HOWTO.md](<docker/docker project deployment HOWTO.md>)
+
 
 Bash completion is also included - ie type:
 
