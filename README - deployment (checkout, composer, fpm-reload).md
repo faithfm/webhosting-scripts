@@ -12,11 +12,11 @@ Our *webhosting scripts* have allowed for much simpler deploymnent scripts - in 
 
 | Deployment Type | Environment | Script Type | Line 1 | Line 2 | Line 3 |
 |---|---|---|---|---|---|
-| Laravel | staging | PR hook |  |  wh checkout-PR | wh composer-deploy |
-| Laravel | production | GH/Forge | cd /home/user/site |  wh checkout-github | wh composer-deploy-sessions |
-| WordPress | staging | PR hook |  | wh checkout-PR /path/to/working-tree | wh fpm-reload |
-| WordPress | production | PR hook |  | wh checkout-PR --MASTER-BRANCH-ONLY /path/to/working-tree | wh fpm-reload |
-| Docker* | staging | PR hook |  |  wh checkout-PR | wh docker-deploy |
+| Laravel | staging | PR hook | wh checkout-PR | wh composer-deploy |
+| Laravel | production | GH/Forge |  wh checkout-github | wh composer-deploy-sessions |
+| WordPress | staging | PR hook | wh checkout-PR /path/to/working-tree | wh fpm-reload |
+| WordPress | production | PR hook | wh checkout-PR --MASTER-BRANCH-ONLY /path/to/working-tree | wh fpm-reload |
+| Docker* | staging | PR hook |  wh checkout-PR | wh docker-deploy |
 | Docker* | production | GH/Forge | cd /home/user/site |  wh checkout-github | wh docker-deploy |
 
 

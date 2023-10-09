@@ -92,7 +92,7 @@ if [ -f $bash_script ]; then
 # Else, if the python script exists, execute it
 elif [ -f $python_script ]; then
     source $WH_BASE_DIR/venv/bin/activate
-    python3 $python_script $@
+    python3 $python_script "$@"
 else
     echo "Invalid command '$command': (No such script wh-${command}.sh or wh-${command}.py)"
     echo
