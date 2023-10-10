@@ -9,10 +9,24 @@ export WH_CURRENT_DIR=$(pwd)
 export PYENV_VERSION=$(cat $WH_BASE_DIR/.python-version)
 export PYENV_DIR="/home/shared/.pyenv"
 
-# Extract WH_USER + WH_SITE from WH_CURRENT_DIR if possible
+# If WH_CURRENT_DIR is the home directory, try to detect a site folder, and use this instead of WH_CURRENT_DIR when searching for PROJECT/SITE/etc
+SEARCH_DIR="$WH_CURRENT_DIR"
+if [[ "$SEARCH_DIR" == "$HOME" ]]; then
+    # search for a subdirectory of the home folder matching a domain name pattern
+    pattern="^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    for subdir in "$HOME"/*; do
+        # Extract just the directory name, without the full path.
+        dir_name=$(basename "$subdir")
+        if [[ -d "$subdir" && "$dir_name" =~ $pattern ]]; then
+            SEARCH_DIR="$subdir"
+        fi
+    done
+fi
+
+# Extract WH_USER + WH_SITE from SEARCH_DIR if possible
 export WH_USER=""
 export WH_SITE=""
-if [[ "$WH_CURRENT_DIR" =~ ^/home/([^/]*)/?([^/]*)? ]]; then
+if [[ "$SEARCH_DIR" =~ ^/home/([^/]*)/?([^/]*)? ]]; then
     WH_USER="${BASH_REMATCH[1]}"
     WH_SITE="${BASH_REMATCH[2]}"
 fi
@@ -32,8 +46,7 @@ else
     export WH_SITE_VALID=false
 fi
 
-# Find the project directory   (highest-level directory in the WH_CURRENT_DIR path containing a .git subfolder)
-SEARCH_DIR="$WH_CURRENT_DIR"
+# Find the project directory (searching upwards)   (highest-level directory in the SEARCH_DIR path containing a .git subfolder)
 export WH_PROJECT_DIR=""
 export WH_PROJECT_ENV=""
 export WH_APP_NAME=""
@@ -51,7 +64,6 @@ while [[ "$SEARCH_DIR" != "/" && "$SEARCH_DIR" != "." ]]; do
     fi
     SEARCH_DIR=$(dirname "$SEARCH_DIR")
 done
-
 
 ###  Detect command-line parameters and show script usage as required  ###
 
