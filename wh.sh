@@ -51,6 +51,7 @@ export WH_PROJECT_DIR=""
 export WH_PROJECT_ENV=""
 export WH_APP_NAME=""
 export WH_LARAVEL_DETECTED=false
+export WH_VITE_DETECTED=false
 while [[ "$SEARCH_DIR" != "/" && "$SEARCH_DIR" != "." ]]; do
     if [[ -d "$SEARCH_DIR/.git" ]]; then
         export WH_PROJECT_DIR="$SEARCH_DIR"
@@ -60,6 +61,9 @@ while [[ "$SEARCH_DIR" != "/" && "$SEARCH_DIR" != "." ]]; do
         fi
         if [[ -f "$WH_PROJECT_DIR/artisan" ]]; then
             export WH_LARAVEL_DETECTED=true
+        fi
+        if [[ -f "$WH_PROJECT_DIR/vite.config.js" ]]; then
+            export WH_VITE_DETECTED=true
         fi
     fi
     SEARCH_DIR=$(dirname "$SEARCH_DIR")

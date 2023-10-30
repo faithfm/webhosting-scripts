@@ -32,6 +32,13 @@ else
     echo -e "\nLaravel not detected.\n"
 fi
 
+# Build npm if Vite detected
+if [[ "$WH_VITE_DETECTED" == "true" ]]; then
+    echo -e "\nVite detected - execute npm commands...\n"
+    npm ci
+    npm run build
+fi
+
 # RECOMMENDED BY LARAVEL, BUT UNSAFE BECAUSE WE USE SAME TABLES FOR DEV+STAGING+PRODUCTION!  -  REMOVED
 # if [ -f artisan ]; then
 #     php artisan migrate --force
