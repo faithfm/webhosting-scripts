@@ -35,6 +35,9 @@ fi
 # Build npm if Vite detected
 if [[ "$WH_VITE_DETECTED" == "true" ]]; then
     echo -e "\nVite detected - execute npm commands...\n"
+    wh update-nvm --if-missing
+    nvm install
+    nvm use
     npm ci
     npm run build
 fi

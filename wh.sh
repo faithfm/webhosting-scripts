@@ -104,6 +104,14 @@ python_script="$WH_SCRIPT_DIR/wh-${command}.py"
 
 # If the bash script exists, execute it
 if [ -f $bash_script ]; then
+    # Ensure NVM is available in child script
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    while read -r func; do
+        export -f $func
+    done < <(declare -F | grep -E 'declare -f nvm' | cut -d' ' -f3)
+
+    # Call the bash script
     bash $bash_script $@
 # Else, if the python script exists, execute it
 elif [ -f $python_script ]; then
