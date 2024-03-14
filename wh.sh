@@ -39,9 +39,12 @@ else
 fi
 
 # Check WH_SITE validity
-if [[ -f "/etc/nginx/sites-available/$WH_SITE" ]]; then
+export WH_SITE_NGINX_FILE="/etc/nginx/sites-available/$WH_SITE"
+if [[ -f $WH_SITE_NGINX_FILE ]]; then
     export WH_SITE_VALID=true
-    export WH_WEBROOT_DIR=$(grep '^\s*root\s' "/etc/nginx/sites-available/$WH_SITE" | awk '{ print $2 }' | tr -d ';')
+    export WH_WEBROOT_DIR=$(grep '^\s*root\s' "$WH_SITE_NGINX_FILE" | awk '{ print $2 }' | tr -d ';')
+    export WH_PHP_CMD=$(grep 'fastcgi_pass' "$WH_SITE_NGINX_FILE" | awk -F/ '{print $NF}' | awk -F- '{print $1}')
+    export WH_PHP_VERSION=$($WH_PHP_CMD -v | head -n1 | awk '{print $2}')
 else
     export WH_SITE_VALID=false
 fi

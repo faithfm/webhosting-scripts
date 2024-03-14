@@ -23,11 +23,11 @@ if [[ "$WH_LARAVEL_DETECTED" == "true" ]]; then
 
     # Restart queue workers (only required for some projects, but doesn't hurt to run it anyway)
     echo -e "\n Restarting queue workers (if any)...\n"
-    php artisan queue:restart
+    $WH_PHP_CMD artisan queue:restart
     
     # Clear laravel cache (fixes problem with job workers not being called - https://github.com/laravel/framework/issues/16476#issuecomment-476036660)
     echo -e "\n Clearing Laravel cache...\n"
-    php artisan cache:clear
+    $WH_PHP_CMD artisan cache:clear
 else
     echo -e "\nLaravel not detected.\n"
 fi
