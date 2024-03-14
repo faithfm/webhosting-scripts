@@ -14,9 +14,6 @@ cd "$WH_PROJECT_DIR"
 echo -e "\nInstalling composer dependencies...\n"
 composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Restart detected php-fpm services
-wh fpm-reload
-
 # Restart queue workers and clear cache (for Laravel projects)
 if [[ "$WH_LARAVEL_DETECTED" == "true" ]]; then
     echo -e "\nLaravel detected - execute php artisan commands...\n"
@@ -41,6 +38,9 @@ if [[ "$WH_VITE_DETECTED" == "true" ]]; then
     npm ci
     npm run build
 fi
+
+# Restart detected php-fpm services
+wh fpm-reload
 
 # RECOMMENDED BY LARAVEL, BUT UNSAFE BECAUSE WE USE SAME TABLES FOR DEV+STAGING+PRODUCTION!  -  REMOVED
 # if [ -f artisan ]; then
