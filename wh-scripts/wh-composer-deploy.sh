@@ -38,13 +38,24 @@ if [[ "$WH_VITE_DETECTED" == "true" ]]; then
     npm ci
     npm run build
 
-    # Extra build when 'vue3' folder detected - ie: faithassets-v1 project
-    if [[ "$WH_VUE3_EXTRA_BUILD" == "true" ]]; then
-        echo -e "\nExtra 'vue3' build folder detected - execute npm commands in this folder too...\n"
-        cd vue3
+    # Extra build when 'vue2' folder detected - ie: faithassets-v1 project
+    if [[ "$WH_VUE2_EXTRA_BUILD" == "true" ]]; then
+        echo -e "\nExtra 'vue2' build folder detected - execute npm commands in this folder too...\n"
+        pushd vue2
         nvm use
         npm ci
         npm run build
+        popd
+    fi
+
+    # Extra build when 'vue3' folder detected - ie: faithassets-v1 project
+    if [[ "$WH_VUE3_EXTRA_BUILD" == "true" ]]; then
+        echo -e "\nExtra 'vue3' build folder detected - execute npm commands in this folder too...\n"
+        pushd vue3
+        nvm use
+        npm ci
+        npm run build
+        popd
     fi
 fi
 

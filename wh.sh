@@ -55,6 +55,7 @@ export WH_PROJECT_ENV=""
 export WH_APP_NAME=""
 export WH_LARAVEL_DETECTED=false
 export WH_VITE_DETECTED=false
+export WH_VUE2_EXTRA_BUILD=false
 export WH_VUE3_EXTRA_BUILD=false
 while [[ "$SEARCH_DIR" != "/" && "$SEARCH_DIR" != "." ]]; do
     if [[ -d "$SEARCH_DIR/.git" ]]; then
@@ -68,6 +69,9 @@ while [[ "$SEARCH_DIR" != "/" && "$SEARCH_DIR" != "." ]]; do
         fi
         if [[ -f "$WH_PROJECT_DIR/vite.config.js" ]]; then
             export WH_VITE_DETECTED=true
+        fi
+        if [[ -f "$WH_PROJECT_DIR/vue2/package.json" ]]; then
+            export WH_VUE2_EXTRA_BUILD=true
         fi
         if [[ -f "$WH_PROJECT_DIR/vue3/package.json" ]]; then
             export WH_VUE3_EXTRA_BUILD=true
