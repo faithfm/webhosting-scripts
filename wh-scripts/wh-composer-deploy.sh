@@ -2,6 +2,17 @@
 
 # This script is used to deploy a PHP (with composer) project - after the code has checked-out/updated.
 
+# Function to check if the specified 'npm run xxx' script exists and run it
+npm_run_if_exists() {
+    local script_name=$1
+    local scripts=$(npm run | grep -Eo '^  [a-zA-Z0-9:-]+' | awk '{print $1}')
+    
+    if echo "$scripts" | grep -q "^$script_name$"; then
+        echo "Detected 'npm run $script_name' - execute it..."
+        npm run "$script_name"
+    fi
+}
+
 # Ensure project directory is detected, and make it the current working directory
 if [[ -z "$WH_PROJECT_DIR" ]]; then
   echo "ERROR: project directory not detected"
@@ -36,7 +47,8 @@ if [[ "$WH_VITE_DETECTED" == "true" ]]; then
     nvm install
     nvm use
     npm ci
-    npm run build
+    npm_run_if_exists "prod"        # Laravel mix
+    npm_run_if_exists "build"       # Vite
 
     # Extra build when 'vue2' folder detected - ie: faithassets-v1 project
     if [[ "$WH_VUE2_EXTRA_BUILD" == "true" ]]; then
@@ -44,7 +56,8 @@ if [[ "$WH_VITE_DETECTED" == "true" ]]; then
         pushd vue2
         nvm use
         npm ci
-        npm run build
+        npm_run_if_exists "prod"    # Laravel mix
+        npm_run_if_exists "build"   # Vite
         popd
     fi
 
@@ -54,7 +67,8 @@ if [[ "$WH_VITE_DETECTED" == "true" ]]; then
         pushd vue3
         nvm use
         npm ci
-        npm run build
+        npm_run_if_exists "prod"    # Laravel mix
+        npm_run_if_exists "build"   # Vite
         popd
     fi
 fi
