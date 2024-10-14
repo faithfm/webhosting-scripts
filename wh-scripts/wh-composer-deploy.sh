@@ -40,37 +40,37 @@ else
     echo -e "\nLaravel not detected.\n"
 fi
 
-# Build npm if Vite detected
-if [[ "$WH_VITE_DETECTED" == "true" ]]; then
-    echo -e "\nVite detected - execute npm commands...\n"
+# Build npm if .gitignore ignores the 'public/build' folder - ie: Vite projects
+if [[ -f .gitignore && $(grep -c 'public/build' .gitignore) -gt 0 ]]; then
+    echo -e "\n'public/build' folder is ignored in .gitignore - execute npm commands...\n"
     wh update-nvm --if-missing
     nvm install
     nvm use
     npm ci
     npm_run_if_exists "prod"        # Laravel mix
     npm_run_if_exists "build"       # Vite
+fi
 
-    # Extra build when 'vue2' folder detected - ie: faithassets-v1 project
-    if [[ "$WH_VUE2_EXTRA_BUILD" == "true" ]]; then
-        echo -e "\nExtra 'vue2' build folder detected - execute npm commands in this folder too...\n"
-        pushd vue2
-        nvm use
-        npm ci
-        npm_run_if_exists "prod"    # Laravel mix
-        npm_run_if_exists "build"   # Vite
-        popd
-    fi
+# Extra build when 'vue2' folder detected - ie: faithassets-v1 project
+if [[ "$WH_VUE2_EXTRA_BUILD" == "true" ]]; then
+    echo -e "\nExtra 'vue2' build folder detected - execute npm commands in this folder too...\n"
+    pushd vue2
+    nvm use
+    npm ci
+    npm_run_if_exists "prod"    # Laravel mix
+    npm_run_if_exists "build"   # Vite
+    popd
+fi
 
-    # Extra build when 'vue3' folder detected - ie: faithassets-v1 project
-    if [[ "$WH_VUE3_EXTRA_BUILD" == "true" ]]; then
-        echo -e "\nExtra 'vue3' build folder detected - execute npm commands in this folder too...\n"
-        pushd vue3
-        nvm use
-        npm ci
-        npm_run_if_exists "prod"    # Laravel mix
-        npm_run_if_exists "build"   # Vite
-        popd
-    fi
+# Extra build when 'vue3' folder detected - ie: faithassets-v1 project
+if [[ "$WH_VUE3_EXTRA_BUILD" == "true" ]]; then
+    echo -e "\nExtra 'vue3' build folder detected - execute npm commands in this folder too...\n"
+    pushd vue3
+    nvm use
+    npm ci
+    npm_run_if_exists "prod"    # Laravel mix
+    npm_run_if_exists "build"   # Vite
+    popd
 fi
 
 # Restart detected php-fpm services
