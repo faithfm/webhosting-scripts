@@ -67,7 +67,8 @@ while [[ "$SEARCH_DIR" != "/" && "$SEARCH_DIR" != "." ]]; do
         if [[ -f "$WH_PROJECT_DIR/artisan" ]]; then
             export WH_LARAVEL_DETECTED=true
         fi
-        if [[ -f "$WH_PROJECT_DIR/vite.config.mjs" || -f "$WH_PROJECT_DIR/vite.config.js" ]]; then
+        # check for vite.config as a js, mjs, or ts file
+        if [[ -f "$WH_PROJECT_DIR/vite.config.mjs" || -f "$WH_PROJECT_DIR/vite.config.js" || -f "$WH_PROJECT_DIR/vite.config.ts" ]]; then
             export WH_VITE_DETECTED=true
         fi
         if [[ -f "$WH_PROJECT_DIR/vue2/package.json" ]]; then
