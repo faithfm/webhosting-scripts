@@ -37,6 +37,18 @@ except KeyError:
     syslogged_message(f"Error: New Relic API key (NR_API_KEY) not found.  (Should be defined in: {nr_env_file_path})")
 
 
+def move_to_errors(filename):
+    """Move a failed log file to the errors subfolder. Returns dest path, or None if file no longer exists."""
+    errors_dir = os.path.join(os.path.dirname(filename), "errors")
+    os.makedirs(errors_dir, exist_ok=True)
+    dest = os.path.join(errors_dir, os.path.basename(filename))
+    try:
+        os.rename(filename, dest)
+    except FileNotFoundError:
+        return None
+    return dest
+
+
 def main():
     # Iterate through all the .log files in the directory
     filecount = 0
@@ -51,13 +63,25 @@ def main():
 
             # Delete the log file after it has been processed
             os.remove(filename)
-            
+
+        except json.JSONDecodeError as e:
+            dest = move_to_errors(filename)
+            location = f"moved to {dest}" if dest else "file already gone"
+            syslogged_message(f"ERROR: Invalid JSON in {os.path.basename(filename)} — {location}: {e}")
+
+        except ValueError as e:
+            dest = move_to_errors(filename)
+            location = f"moved to {dest}" if dest else "file already gone"
+            syslogged_message(f"ERROR: {e} — {os.path.basename(filename)} {location}")
+
         except Exception as e:
-            syslogged_message(f"An error occurred while processing the file {filename}: {e}")
-            
+            dest = move_to_errors(filename)
+            location = f"moved to {dest}" if dest else "file already gone"
+            syslogged_message(f"ERROR: Unexpected error processing {os.path.basename(filename)} — {location}: {type(e).__name__}: {e}")
+
     # If no files were processed, print a message
     if filecount == 0:
-        print(f"No NewRelic deployments found.")
+        print("No NewRelic deployments found.")
 
 
 def nr_query(query, variables):
@@ -114,7 +138,10 @@ def get_entity_guid(app_name=''):
     response = nr_query(query, variables)
 
     # Extract the entity GUID from the response
-    entity_guid = response.json()['data']['actor']['entitySearch']['results']['entities'][0]['guid']
+    entities = response.json()['data']['actor']['entitySearch']['results']['entities']
+    if not entities:
+        raise ValueError(f"No New Relic entity found for app: '{app_name}'")
+    entity_guid = entities[0]['guid']
 
     return entity_guid
 
