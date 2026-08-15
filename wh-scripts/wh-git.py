@@ -48,6 +48,18 @@ def get_home_dir(folder):
         return None
     return os.path.join(os.path.sep, *path.split(os.path.sep)[1:3])    
 
+def is_within_dir(directory, cwd):
+    """
+    Return True if 'cwd' IS the specified directory, or is a subdirectory of it.
+    Note: a plain string comparison is not sufficient, since it ignores directory boundaries -
+    ie: '/home/user/plugins/my-plugin-v2' is NOT a subdirectory of '/home/user/plugins/my-plugin',
+    even though the text of the second is a prefix of the first.
+    """
+    if not isinstance(directory, str) or not directory.strip():
+        return False
+    directory = os.path.normpath(directory.strip())
+    return cwd == directory or cwd.startswith(directory + os.sep)
+
 def find_matching_git_config(cwd):
     """
     Check the current directory against the list of git repo configurations in 'wh-git-repos.yml'.
@@ -57,21 +69,29 @@ def find_matching_git_config(cwd):
     home = get_home_dir(cwd)
     if not home:
         return None
-    
+
     # Check existence of the configuration file path
     config_path = os.path.join(home, "wh-git-repos.yml")
     if not os.path.exists(config_path):
         return None
-    
+
     # Load configuration file
-    with open(config_path, 'r') as f:
-        configs = yaml.safe_load(f)
+    try:
+        with open(config_path, 'r') as f:
+            configs = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(f"   WARNING: ignoring invalid configuration file '{config_path}': {e}")
+        return None
 
     # Check if the current directory matches a configured directory
-    for config in configs:
-        if cwd.startswith(config['bare']) or cwd.startswith(config['work']):
+    cwd = os.path.normpath(cwd)
+    for config in configs or []:
+        if not isinstance(config, dict) or 'bare' not in config or 'work' not in config:
+            print(f"   WARNING: ignoring invalid entry in '{config_path}': {config}")
+            continue
+        if is_within_dir(config['bare'], cwd) or is_within_dir(config['work'], cwd):
             return [config['bare'], config['work']]
-    
+
     # No match found
     return None
 

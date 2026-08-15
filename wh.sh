@@ -114,7 +114,6 @@ print_usage() {
         echo "  $command"
     done
     echo
-    exit 0
 }
 
 # If no parameters have been provided or the command doesn't exist
