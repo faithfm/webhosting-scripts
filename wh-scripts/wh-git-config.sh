@@ -12,6 +12,10 @@ echo ""
 # confirm before proceeding
 read -p "Proceed? (y/n) " -n 1 -r
 echo ""
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Exiting..."
+    exit 1
+fi
 
 # configure git user (to enable local commits)
 git config --global user.email "$USER@$HOSTNAME"

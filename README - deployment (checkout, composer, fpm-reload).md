@@ -14,8 +14,8 @@ Our *webhosting scripts* have allowed for much simpler deploymnent scripts - in 
 |---|---|---|---|---|---|
 | Laravel | staging | PR hook | wh checkout-PR | wh composer-deploy |
 | Laravel | production | GH/Forge |  wh checkout-github | wh composer-deploy-sessions |
-| WordPress | staging | PR hook | wh checkout-PR /path/to/working-tree | wh fpm-reload |
-| WordPress | production | PR hook | wh checkout-PR --MASTER-BRANCH-ONLY /path/to/working-tree | wh fpm-reload |
+| WordPress | staging | PR hook | wh checkout-PR | wh fpm-reload |
+| WordPress | production | PR hook | wh checkout-PR --MASTER-BRANCH-ONLY | wh fpm-reload |
 | Docker* | staging | PR hook |  wh checkout-PR | wh docker-deploy |
 | Docker* | production | GH/Forge | cd /home/user/site |  wh checkout-github | wh docker-deploy |
 
@@ -42,7 +42,7 @@ Our *webhosting scripts* have allowed for much simpler deploymnent scripts - in 
 
 * For **WordPress** custom plugins and themes, the git repos on the server are **bare git repos** under the `git/plugins/` or `git/themes` folders, and are checked-out to working folders located under the `htdocs/wp-content/plugins/` or `htdocs/wp-content/themes/` folders.
 
-  * The project/working folder must be specified as shown when deploying **bare repos**.
+  * Each bare repo must be paired with its working folder in the **`wh-git-repos.yml`** file in the user's home folder - this is what allows `wh git` (and therefore `wh checkout-PR`) to find the correct working tree.  A bare repo that isn't listed there will not deploy correctly.  See `wh git` for the file format.
   
   * Note: The main WordPress folder is deployed manually and updated by WordPress itself - ie: not using git.
 

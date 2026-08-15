@@ -19,7 +19,7 @@ wh python-update                  # occasionally update pyenv, python, and the p
 
 # project checkout/update commands
 #   [NOTE 1] below - Deployment README - additional info
-wh checkout-github                # checkout project from GitHub master
+wh checkout-github [branch]       # checkout project from GitHub  (master if no branch specified)
 wh checkout-PR                    # checkout project from a pull request
 
 # PHP/composer deployment

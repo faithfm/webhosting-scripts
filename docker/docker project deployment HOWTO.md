@@ -3,7 +3,7 @@
 Firstly, ensure that Docker has been installed:
 
 ```bash
-wh docker-update
+wh docker-install
 # ...and restart shell
 ```
 

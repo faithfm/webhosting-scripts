@@ -3,10 +3,14 @@
 # Designed to be use as a post-receive hook on a git repo.
 #
 # Usage:
-#    wh checkout-PR [--MASTER-BRANCH-ONLY] [</path/to/working-tree-for-bare-repos>]
+#    wh checkout-PR [--MASTER-BRANCH-ONLY]
 #
 # When called by a git post-receive hook, this script will:
 #   - Checkout the latest commit of any branch (Hard-reset allows deployment of force-pushes)
+#
+# For BARE repos (ie: WordPress plugins/themes) the working tree is not specified here - it comes
+# from the 'wh-git-repos.yml' file in the home folder, which "wh git" uses to pair each bare repo
+# with its working directory.  (See "wh git" for details.)
 
 echo -e "\nDeploying code from post-receive script:\n"
 
