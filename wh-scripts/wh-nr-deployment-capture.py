@@ -20,6 +20,13 @@ def git(*args, cwd, env):
     return result.stdout.strip()
 
 
+def git_optional(*args, cwd, env):
+    """As per git(), but returns an empty string instead of exiting when the command fails.
+    (Used for information we can do without - ie: projects with no 'origin' remote.)"""
+    result = subprocess.run(["git"] + list(args), cwd=cwd, env=env, capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 def main():
     project_dir = os.environ.get("WH_PROJECT_DIR")
     if not project_dir:
@@ -41,6 +48,9 @@ def main():
     commit_message   = git("log", "-1", "--format=%B", cwd=project_dir, env=env)
     commit_timestamp = int(git("log", "-1", "--format=%ct", commit_hash, cwd=project_dir, env=env))
 
+    # Used to build the deployment marker's 'deepLink' - empty when there is no 'origin' remote
+    remote_url = git_optional("config", "--get", "remote.origin.url", cwd=project_dir, env=env)
+
     deployment_timestamp = int(datetime.now().timestamp())
     log_file = os.path.join(LOG_DIR, f"{deployment_timestamp}-{os.environ.get('USER', 'unknown')}.log")
 
@@ -55,12 +65,14 @@ def main():
         "deployment_timestamp": deployment_timestamp,
         "app_name":             app_name,
         "nr_helper_detected":   nr_helper_detected,
+        "remote_url":           remote_url,
     }
 
     with open(log_file, "w") as f:
         json.dump(data, f, indent=2)
 
-    os.chmod(log_file, 0o666)
+    # World-readable so the forge user can forward it, but not world-writable
+    os.chmod(log_file, 0o644)
     print(f"JSON log has been written to: {log_file}")
 
 

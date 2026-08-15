@@ -76,8 +76,15 @@ app_deploy_log_dir="/var/log/app-deploys"
 if [ ! -d "$app_deploy_log_dir" ]; then
     echo -e "\nNew Relic app deploys log folder ($app_deploy_log_dir) does not exist - creating it..."
     sudo mkdir "$app_deploy_log_dir"
-    sudo chmod 777 "$app_deploy_log_dir"
 fi
+
+# Every site user writes deployment logs here, but they shouldn't be able to touch each other's:
+#   - the sticky bit stops one site user deleting/renaming another site user's log files
+#   - forge owns the folder (so the forwarder can still delete/quarantine any of them)
+# Applied on every update - not just at creation - so that existing servers are corrected too.
+sudo chown forge:forge "$app_deploy_log_dir"
+sudo chmod 1777 "$app_deploy_log_dir"
+sudo -u forge mkdir -p "$app_deploy_log_dir/errors"
 
 
 echo -e "\nDone."
