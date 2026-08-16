@@ -133,7 +133,7 @@ bash_script="$WH_SCRIPT_DIR/wh-${command}.sh"
 python_script="$WH_SCRIPT_DIR/wh-${command}.py"
 
 # If the bash script exists, execute it
-if [ -f $bash_script ]; then
+if [ -f "$bash_script" ]; then
     # Ensure NVM is available in child script
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
@@ -142,11 +142,11 @@ if [ -f $bash_script ]; then
     done < <(declare -F | grep -E 'declare -f nvm' | cut -d' ' -f3)
 
     # Call the bash script
-    bash $bash_script $@
+    bash "$bash_script" "$@"
 # Else, if the python script exists, execute it
-elif [ -f $python_script ]; then
-    source $WH_BASE_DIR/venv/bin/activate
-    python3 $python_script "$@"
+elif [ -f "$python_script" ]; then
+    source "$WH_BASE_DIR/venv/bin/activate"
+    python3 "$python_script" "$@"
 else
     echo "Invalid command '$command': (No such script wh-${command}.sh or wh-${command}.py)"
     echo
