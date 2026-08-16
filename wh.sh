@@ -3,10 +3,10 @@
 
 ###  Determine the key environment variables that can be expected/used in any webhosting script  ###
 
-export WH_BASE_DIR=$(dirname $(readlink -f "$0"))
+export WH_BASE_DIR=$(dirname "$(readlink -f "$0")")
 export WH_SCRIPT_DIR="$WH_BASE_DIR/wh-scripts"
 export WH_CURRENT_DIR=$(pwd)
-export PYENV_VERSION=$(cat $WH_BASE_DIR/.python-version)
+export PYENV_VERSION=$(cat "$WH_BASE_DIR/.python-version")
 export PYENV_DIR="/home/shared/.pyenv"
 
 # If WH_CURRENT_DIR is the home directory, try to detect a site folder, and use this instead of WH_CURRENT_DIR when searching for PROJECT/SITE/etc
@@ -109,7 +109,7 @@ print_usage() {
     echo
     echo "Available commands:"
     # List every file in the commands directory
-    cmd_list=$(ls -I wh $WH_SCRIPT_DIR/wh-* | xargs -n1 basename | sed 's/wh-//; s/\..*$//')
+    cmd_list=$(ls -I wh "$WH_SCRIPT_DIR"/wh-* | xargs -n1 basename | sed 's/wh-//; s/\..*$//')
     for command in $cmd_list; do
         echo "  $command"
     done
