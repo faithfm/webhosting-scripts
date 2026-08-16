@@ -44,8 +44,8 @@ if [[ -f $WH_SITE_NGINX_FILE ]]; then
     export WH_SITE_VALID=true
     export WH_WEBROOT_DIR=$(grep '^\s*root\s' "$WH_SITE_NGINX_FILE" | awk '{ print $2 }' | tr -d ';')
     
-    # Try to find fastcgi_pass in the main nginx file
-    export WH_PHP_CMD=$(grep 'fastcgi_pass' "$WH_SITE_NGINX_FILE" | awk -F/ '{print $NF}' | awk -F- '{print $1}')
+    # Try to find fastcgi_pass in the main nginx file  (first non-commented directive wins)
+    export WH_PHP_CMD=$(grep -E '^[[:space:]]*fastcgi_pass' "$WH_SITE_NGINX_FILE" | head -n1 | awk -F/ '{print $NF}' | awk -F- '{print $1}')
     
     # If not found, look for an included forge-conf file
     if [[ -z "$WH_PHP_CMD" ]]; then
@@ -55,14 +55,19 @@ if [[ -f $WH_SITE_NGINX_FILE ]]; then
             # Resolve the path relative to the nginx directory
             FORGE_CONF_FILE="/etc/nginx/$FORGE_CONF_INCLUDE"
             if [[ -f "$FORGE_CONF_FILE" ]]; then
-                export WH_PHP_CMD=$(grep 'fastcgi_pass' "$FORGE_CONF_FILE" | awk -F/ '{print $NF}' | awk -F- '{print $1}')
+                export WH_PHP_CMD=$(grep -E '^[[:space:]]*fastcgi_pass' "$FORGE_CONF_FILE" | head -n1 | awk -F/ '{print $NF}' | awk -F- '{print $1}')
             fi
         fi
     fi
     
-    # Set PHP version if WH_PHP_CMD was found
-    if [[ -n "$WH_PHP_CMD" ]]; then
-        export WH_PHP_VERSION=$($WH_PHP_CMD -v | head -n1 | awk '{print $2}')
+    # Sanity-check the detected value: must look like 'php' / 'php8.4'  (guards against unexpected nginx formats - eg: TCP fastcgi_pass directives)
+    if [[ ! "$WH_PHP_CMD" =~ ^php[0-9.]*$ ]]; then
+        export WH_PHP_CMD=""
+    fi
+
+    # Set PHP version if WH_PHP_CMD was found (and is actually installed)
+    if [[ -n "$WH_PHP_CMD" ]] && command -v "$WH_PHP_CMD" >/dev/null; then
+        export WH_PHP_VERSION=$("$WH_PHP_CMD" -v | head -n1 | awk '{print $2}')
     fi
 else
     export WH_SITE_VALID=false
