@@ -21,9 +21,9 @@ fi
 cd "$WH_PROJECT_DIR"
 
 
-# Install composer dependencies
+# Install composer dependencies  ('wh composer' targets the site's PHP version - not the default CLI one)
 echo -e "\nInstalling composer dependencies...\n"
-composer install --no-interaction --prefer-dist --optimize-autoloader
+wh composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # Restart queue workers and clear cache (for Laravel projects)
 if [[ "$WH_LARAVEL_DETECTED" == "true" ]]; then
@@ -31,11 +31,11 @@ if [[ "$WH_LARAVEL_DETECTED" == "true" ]]; then
 
     # Restart queue workers (only required for some projects, but doesn't hurt to run it anyway)
     echo -e "\n Restarting queue workers (if any)...\n"
-    $WH_PHP_CMD artisan queue:restart
+    wh php artisan queue:restart
     
     # Clear laravel cache (fixes problem with job workers not being called - https://github.com/laravel/framework/issues/16476#issuecomment-476036660)
     echo -e "\n Clearing Laravel cache...\n"
-    $WH_PHP_CMD artisan cache:clear
+    wh php artisan cache:clear
 else
     echo -e "\nLaravel not detected.\n"
 fi

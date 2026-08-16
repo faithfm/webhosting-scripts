@@ -47,3 +47,5 @@ Our *webhosting scripts* have allowed for much simpler deploymnent scripts - in 
   * Note: The main WordPress folder is deployed manually and updated by WordPress itself - ie: not using git.
 
 * `wh-composer-deploy` also sends a deployment event to New Relic
+
+* Our servers have **several PHP versions installed**, and deployment scripts must target the version the site actually runs (`WH_PHP_CMD`) rather than the default command-line version.  `wh composer-deploy` does this internally by calling `wh composer` and `wh php` instead of `composer` and `php`.  Use these same commands for any manual command-line work on a site - eg: `wh composer install`, `wh php artisan migrate`.

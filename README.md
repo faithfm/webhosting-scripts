@@ -22,6 +22,11 @@ wh python-update                  # occasionally update pyenv, python, and the p
 wh checkout-github [branch]       # checkout project from GitHub  (master if no branch specified)
 wh checkout-PR                    # checkout project from a pull request
 
+# PHP/composer version targeting
+#   [NOTE 3] below - our servers have multiple PHP versions installed
+wh php <args>                     # run PHP using the version targeted by the current site  (eg: wh php -v)
+wh composer <args>                # run composer using the version of PHP targeted by the current site
+
 # PHP/composer deployment
 #   [NOTE 1] below - Deployment README - additional info
 wh composer-deploy                # deploy composer dependencies... (including extra steps for Forge projects)
@@ -55,6 +60,8 @@ Many of these  web-hosting scripts are focused on deploying code updates to webs
 > NOTE 1: For more details regarding code deployments see:  [README - deployment (checkout, composer, fpm-reload).md](<README - deployment (checkout, composer, fpm-reload).md>)
 
 > NOTE 2: How to deploy a containerised Express / Apollo GraphQL server site see: [docker project deployment HOWTO.md](<docker/docker project deployment HOWTO.md>)
+
+> NOTE 3: Our servers have **several PHP versions installed**, and each site targets a specific one (detected as `WH_PHP_CMD` from the site's nginx `fastcgi_pass` directive).  PHP-FPM always uses the correct version, but the **command line** does not - a bare `php` or `composer` silently uses the server's *default* CLI version instead, which is often an older one.  This matters most for `composer`, which resolves dependencies (and runs composer scripts such as Laravel's `post-autoload-dump` hooks) against whichever PHP version executes it - so running the wrong one writes a `vendor/` folder built for the wrong runtime.  Use `wh php` and `wh composer` instead of `php` and `composer` for anything related to a site.
 
 
 Bash completion is also included - ie type:
