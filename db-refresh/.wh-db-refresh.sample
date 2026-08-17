@@ -1,0 +1,59 @@
+# Site-specific config for 'wh db-refresh-import'.
+#
+# Copy this file to the TARGET site's folder (the site being refreshed) as:
+#     /home/<site-user>/<site-domain>/.wh-db-refresh
+# and fill in the values.  It lives beside the site, outside the webroot and outside any git repo -
+# it survives every refresh (only the database is replaced), and it never needs to be published.
+# Plain bash 'KEY=value' syntax (the script sources it).
+
+# The source site's URL exactly as stored in its 'siteurl' option (scheme, no trailing slash).
+# Every occurrence is rewritten to this site's own siteurl during the import.
+# NOTE: the import refuses to run if THIS site's host contains the source's (eg: source example.com,
+# this site staging.example.com) - the single-pass rewrite would double-prefix any pre-existing
+# "staging.example.com" text carried in the source's data.  app-staging.example.com from
+# app.example.com is fine; so is the reverse direction.
+SOURCE_URL="https://app.example.com"
+
+# Tables to TRUNCATE on this site straight after the import - eg: an outbound job/event queue,
+# so a refreshed clone can never work through the source's pending backlog.  Comma-separated
+# full table names.  Optional.
+TRUNCATE_TABLES="wp_some_queue_table"
+
+# Tables the export MUST have excluded from the dump (checked against the hand-off manifest;
+# the import refuses to run if any of these were dumped).  Normally the same list as above.
+# Optional, but recommended wherever TRUNCATE_TABLES is used.
+EXPECT_EXCLUDED="wp_some_queue_table"
+
+# Optional clone-guard canary: a wp_options name whose value is the base64 of the SOURCE_URL and
+# which the source site's guard plugin arms itself with.  After the import the script checks it
+# still decodes to SOURCE_URL - ie: the guard sees this site as a clone and blocks outbound.
+# Leave empty if the site has no such mechanism.
+CANARY_OPTION=""
+
+# Row-count tolerance (whole percent) when comparing key tables against the source's counts at
+# dump time - a live source keeps writing during a refresh, so exact matches aren't expected on
+# churny tables. Optional, default 1.
+ROW_DRIFT_PCT=1
+
+# Refuse hand-offs older than this many hours (a stale dump imports "clean" but is not the refresh
+# anyone meant). 0 disables the check. Optional, default 24.
+MAX_HANDOFF_AGE_HOURS=24
+
+# The source's WP-Cron schedule arrives with wp_options and this site will start running it -
+# every plugin's scheduled jobs, against the imported data. Set true to drop the inherited schedule
+# right after the import (`wp option delete cron`): WordPress core and most plugins re-register
+# their jobs on the next load, but a plugin that only schedules on activation would lose its job
+# until re-activated. Default false = keep it and report the count.
+CLEAR_CRON=false
+
+# If this site has a persistent object cache (Redis / Memcached drop-in), the import must reset it -
+# the raw-SQL import never invalidates it, so WordPress would keep serving pre-import values. The
+# default is `wp cache flush`, which for Redis is FLUSHDB on this site's DB index and for Memcached
+# is flush_all on the whole instance. Set true ONLY if this site shares the SAME Redis DB index, or
+# the same Memcached instance, with the source - then the import invalidates only the 'alloptions'
+# and 'notoptions' keys (safe with distinct key prefixes) and EVERYTHING ELSE - posts, users, terms,
+# meta, individually cached options - keeps its pre-import value, indefinitely if the cache has no
+# TTL. Treat true as a one-run stopgap: the real fix is a separate Redis DB index for this site (or
+# selective flush), then the default. A shared Redis instance with SEPARATE DB indexes is fine on the
+# default. The acceptance checks read MySQL directly either way, so this never affects what they see.
+SKIP_CACHE_FLUSH=false

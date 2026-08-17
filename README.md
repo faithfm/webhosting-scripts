@@ -45,6 +45,11 @@ wh docker-get-context             # HELPER:  load and validate context of the cu
 wh docker-copy-config             # HELPER:  copy docker configuration templates to current project
 wh docker-install                 # install or update docker
 
+# WordPress database refresh between sibling sites on the same server (eg: prod -> staging)
+#   [NOTE 4] below - db-refresh HOWTO - config file, safety model, what it checks
+wh db-refresh-export              # as the SOURCE site's user: dump the DB into a locked /tmp hand-off (source is only read)
+wh db-refresh-import              # as the TARGET site's user: import it, re-point URLs, run PASS/FAIL acceptance checks
+
 # backup framework (using restic + resticprofile)
 wh bup                            # show list of backup snapshots
 wh bup-config                     # edit the backup configuration file
@@ -62,6 +67,8 @@ Many of these  web-hosting scripts are focused on deploying code updates to webs
 > NOTE 2: How to deploy a containerised Express / Apollo GraphQL server site see: [docker project deployment HOWTO.md](<docker/docker project deployment HOWTO.md>)
 
 > NOTE 3: Our servers have **several PHP versions installed**, and each site targets a specific one (detected as `WH_PHP_CMD` from the site's nginx `fastcgi_pass` directive).  PHP-FPM always uses the correct version, but the **command line** does not - a bare `php` or `composer` silently uses the server's *default* CLI version instead, which is often an older one.  This matters most for `composer`, which resolves dependencies (and runs composer scripts such as Laravel's `post-autoload-dump` hooks) against whichever PHP version executes it - so running the wrong one writes a `vendor/` folder built for the wrong runtime.  Use `wh php` and `wh composer` instead of `php` and `composer` for anything related to a site.
+
+> NOTE 4: How to refresh a staging/dev WordPress site's database from a sibling production site (config file, safety model, what the checks mean) see: [db-refresh HOWTO.md](<db-refresh/db-refresh HOWTO.md>)
 
 
 Bash completion is also included - ie type:
