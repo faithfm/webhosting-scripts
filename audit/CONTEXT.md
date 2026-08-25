@@ -1,9 +1,9 @@
 # webhosting-scripts — agent context digest
 
 <!-- CTXMAP:START — managed by refresh-context.sh, do not edit between these markers -->
-**Freshness:** HEAD `fdde341` · refreshed 2026-08-25T07:44:40Z (deterministic refresh — no LLM, no egress).
+**Freshness:** HEAD `6d5e403` · refreshed 2026-08-25T23:16:29Z (deterministic refresh — no LLM, no egress).
 
-✅ **In sync** — the digest below reflects the code as of `fdde341`.
+✅ **In sync** — the digest below reflects the code as of `6d5e403`.
 <!-- CTXMAP:END -->
 
 Faith FM's `wh` command suite for Laravel Forge / LEMP web-hosting servers. A bash dispatcher
@@ -28,6 +28,10 @@ Everything downstream depends on these, all derived in [wh.sh](../wh.sh):
 - `WH_SITE_VALID` / `WH_WEBROOT_DIR` — existence + `root` directive of `/etc/nginx/sites-available/$WH_SITE`.
 - `WH_PHP_CMD` / `WH_PHP_VERSION` — first `fastcgi_pass` in that nginx file, else in the included
   `forge-conf/*/site.conf`; sanity-checked against `^php[0-9.]*$`.
+- `WH_WP_PHAR` — the wp-cli **phar** behind `wp` on PATH (machine-wide, not per-site). Only a real
+  phar counts: anything else — a shell wrapper, a stub — leaves it **empty**, and `wh wp` and
+  db-refresh fail closed. Never hand a wrapper to PHP: PHP strips the `#!` line and echoes the rest
+  as text, so a caller parsing the output gets plausible garbage instead of an error.
 - `WH_PROJECT_DIR` / `WH_PROJECT_ENV` / `WH_APP_NAME` — highest ancestor dir containing `.git`; `APP_NAME` from its `.env`.
 - `WH_LARAVEL_DETECTED` / `WH_VITE_DETECTED` / `WH_VUE2|3_EXTRA_BUILD` — presence of `artisan`,
   `vite.config.*`, `vue2/package.json`, `vue3/package.json`.
@@ -70,6 +74,12 @@ wh composer-deploy(-sessions)  [sessions: first rm storage/framework/sessions/*]
 site's. `wh php` / `wh composer` exec `$WH_PHP_CMD` so `vendor/` and composer scripts match the
 runtime the site serves. Both warn to stderr and **fall back to the default** when `WH_PHP_CMD` is
 unset/missing — a silent-wrong-version risk; confirm with `wh show-env`.
+
+**wp-cli:** one current phar per server at `/usr/local/bin/wp` (`root:root`), installed/updated by
+`wh wp-install`; nothing is per-site because wp-cli is version-agnostic toward WP core. `wh wp` execs
+`$WH_PHP_CMD $WH_WP_PHAR --path=$WH_WEBROOT_DIR` — wp-cli *boots* the site's WordPress in-process, so
+every plugin and migration runs under whichever PHP started the phar. It **fails closed** where
+`wh php`/`wh composer` fall back: that pair runs your code, this runs the site's.
 
 **Docker:** `wh docker-deploy` → `wh docker-copy-config` sources `wh-docker-get-context.sh`, which
 sources the project `.env` and resolves `DOCKERFILE_TEMPLATE`/`DOCKERCOMPOSE_TEMPLATE` into

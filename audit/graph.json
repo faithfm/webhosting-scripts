@@ -2,7 +2,7 @@
   "meta": {
     "project": "webhosting-scripts",
     "description": "Faith FM's 'wh' command suite for Laravel Forge / LEMP web-hosting servers: a bash dispatcher that auto-detects site + project context from the filesystem and nginx config, then routes to per-command bash/python scripts covering code deployment, Docker, backups, WordPress database refresh, New Relic deployment markers, and server maintenance.",
-    "node_count": 58,
+    "node_count": 60,
     "groups": {
       "entry": "Entrypoint / dispatcher",
       "deploy": "Deployment commands",
@@ -24,7 +24,7 @@
       "label": "wh.sh",
       "group": "entry",
       "file": "wh.sh",
-      "desc": "The dispatcher. Derives every WH_* variable child scripts rely on — WH_USER/WH_SITE from the CWD path, WH_SITE_VALID + WH_WEBROOT_DIR + WH_PHP_CMD from /etc/nginx/sites-available/$WH_SITE (falling back to an included forge-conf/*/site.conf), and WH_PROJECT_DIR/WH_APP_NAME/WH_LARAVEL_DETECTED/WH_VITE_DETECTED/WH_VUE2|3_EXTRA_BUILD by walking upwards for a .git folder. Then execs wh-scripts/wh-<cmd>.sh (bash, with nvm pre-loaded) or wh-scripts/wh-<cmd>.py (python, under the repo venv).",
+      "desc": "The dispatcher. Derives every WH_* variable child scripts rely on — WH_USER/WH_SITE from the CWD path, WH_SITE_VALID + WH_WEBROOT_DIR + WH_PHP_CMD from /etc/nginx/sites-available/$WH_SITE (falling back to an included forge-conf/*/site.conf), WH_WP_PHAR from `wp` on PATH but only when it is a real phar (a wrapper or stub leaves it empty, so dependants fail closed rather than having a wrapper handed to PHP), and WH_PROJECT_DIR/WH_APP_NAME/WH_LARAVEL_DETECTED/WH_VITE_DETECTED/WH_VUE2|3_EXTRA_BUILD by walking upwards for a .git folder. Then execs wh-scripts/wh-<cmd>.sh (bash, with nvm pre-loaded) or wh-scripts/wh-<cmd>.py (python, under the repo venv).",
       "trace": ""
     },
     {
@@ -480,8 +480,24 @@
       "label": "wp-cli + WordPress site/DB",
       "group": "external",
       "file": null,
-      "desc": "The 'wp' binary, the site's WordPress install under WH_WEBROOT_DIR, and its MySQL database. Both db-refresh commands invoke it as '$WH_PHP_CMD $(command -v wp) --path=<webroot>' so it runs under the site's PHP, and read options via raw SQL rather than get_option().",
+      "desc": "The wp-cli phar, the site's WordPress install under WH_WEBROOT_DIR, and its MySQL database. One current phar per server (installed by wh-wp-install); what varies per site is only the PHP that executes it. wh-wp and both db-refresh commands invoke it as '$WH_PHP_CMD $WH_WP_PHAR --path=<webroot>' so it runs under the site's PHP, and read options via raw SQL rather than get_option().",
       "trace": ""
+    },
+    {
+      "id": "wh-wp-install",
+      "label": "wh-wp-install",
+      "group": "platform",
+      "file": "wh-scripts/wh-wp-install.sh",
+      "desc": "Installs or updates the single per-server wp-cli phar at /usr/local/bin/wp, owned root:root 0755. Downloads the stable build, verifies it against the published .sha512, smoke-tests it against every phpX.Y on the box and reports which versions it runs under (wp-cli's supported window has an UPPER bound as well as a lower one, and some machines here default to a CLI php newer than any site targets), then stages and atomically moves it into place with sudo. Idempotent — a phar already matching the published checksum is left alone — so re-running IS the updater; root ownership is what stops a site user's 'wp cli update' from moving the shared binary out from under everyone. Also retires the two older shapes found on this fleet: a pinned '#!/bin/sh' wrapper at /usr/local/bin/wp and a phar parked at /usr/local/lib/wp-cli.phar. Stray copies under /home are reported, never touched.",
+      "trace": "traces/06-platform-install-update.md"
+    },
+    {
+      "id": "wh-wp",
+      "label": "wh-wp",
+      "group": "helper",
+      "file": "wh-scripts/wh-wp.sh",
+      "desc": "Runs wp-cli against the current site under the SITE's own PHP version: execs `$WH_PHP_CMD $WH_WP_PHAR --path=$WH_WEBROOT_DIR \"$@\"`. Matters more than the php/composer wrappers because wp-cli does not talk TO WordPress — it BOOTS the site's WordPress inside its own process, so every plugin, theme, core update-db migration and search-replace pass runs under whichever PHP started the phar. Unlike wh-php/wh-composer it FAILS CLOSED when WH_PHP_CMD is undetected (those run YOUR code under a default interpreter; this runs the SITE's code, where a guess is not a safe default). Also errors when no phar is installed (pointing at wh wp-install) and when the site is not WordPress. Injects --path from the nginx webroot unless the caller supplied one — accepting wp-config.php in or one level above the webroot, both layouts being present on this fleet — and warns when run by an admin account rather than the site's own user.",
+      "trace": "traces/02-deployment-pipeline.md"
     }
   ],
   "links": [
@@ -1024,6 +1040,31 @@
       "s": ".wh-db-refresh.sample",
       "t": "wh-db-refresh-config",
       "r": "template for"
+    },
+    {
+      "s": "wh",
+      "t": "wh-wp",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-wp-install",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh-wp",
+      "t": "php-multi",
+      "r": "execs wp-cli phar under site PHP"
+    },
+    {
+      "s": "wh-wp",
+      "t": "wp-cli",
+      "r": "runs wp-cli against the site"
+    },
+    {
+      "s": "wh-wp-install",
+      "t": "wp-cli",
+      "r": "installs/updates the per-server phar"
     }
   ]
 }
