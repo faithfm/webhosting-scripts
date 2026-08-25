@@ -69,8 +69,10 @@ command -v getfacl >/dev/null || fail "getfacl not available (install the 'acl' 
 [[ -n "${WH_PHP_CMD:-}" ]] || fail "site PHP version not detected (WH_PHP_CMD empty - check 'wh show-env')"
 WEBROOT="$WH_WEBROOT_DIR"
 [[ -f "$WEBROOT/wp-config.php" ]] || fail "no wp-config.php in detected webroot '$WEBROOT'"
-WP_BIN=$(command -v wp || true); [[ -n "$WP_BIN" ]] || fail "wp-cli ('wp') not found in PATH"
-WP="$WH_PHP_CMD $WP_BIN --path=$WEBROOT"
+# the PHAR, not 'command -v wp' - on a server where /usr/local/bin/wp is a shell wrapper, PHP would
+# echo the wrapper's own source instead of running wp-cli, and every read below would parse that text
+[[ -n "${WH_WP_PHAR:-}" ]] || fail "no usable wp-cli phar on this server ('wp' is absent, or is a shell wrapper that must not be handed to PHP - check 'wh show-env') - an admin can install/replace it with: wh wp-install"
+WP="$WH_PHP_CMD $WH_WP_PHAR --path=$WEBROOT"
 # wp-cli's own PHP-8.x deprecation chatter is not site output - keep it out of what we parse/print;
 # </dev/null so no wp subprocess can ever swallow a caller's stdin (eg: inside a while-read loop)
 wpq() { $WP "$@" 2>/dev/null </dev/null; }
@@ -92,7 +94,9 @@ echo -e "\nwh db-refresh-export: source site $WH_SITE  (user $WH_USER, $WH_PHP_C
 
 # ---- read the site --------------------------------------------------------------------------------
 PREFIX=$(wpq db prefix)
-[[ -n "$PREFIX" ]] || fail "wp-cli could not read the site (empty table prefix) - is the site healthy under $WH_PHP_CMD? Try: $WP db prefix"
+# a real prefix is [A-Za-z0-9_]+ (WordPress' own install rule) - checking the SHAPE, not just
+# non-emptiness, is what stops a broken wp-cli's stray output from being taken for an answer
+[[ "$PREFIX" =~ ^[A-Za-z0-9_]+$ ]] || fail "wp-cli did not return a usable table prefix (got '${PREFIX:0:40}') - is the site healthy under $WH_PHP_CMD? Try: $WP db prefix"
 # options straight from MySQL (not get_option) - the manifest must record what is IN the database, never
 # what a persistent object cache happens to hold
 opt() { wpq db query "SELECT option_value FROM ${PREFIX}options WHERE option_name='$1' LIMIT 1" --skip-column-names | head -n1 | tr -d '\r'; }

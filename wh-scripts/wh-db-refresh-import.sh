@@ -80,8 +80,10 @@ done
 [[ -n "${WH_PHP_CMD:-}" ]] || fail "site PHP version not detected (WH_PHP_CMD empty - check 'wh show-env')"
 WEBROOT="$WH_WEBROOT_DIR"
 [[ -f "$WEBROOT/wp-config.php" ]] || fail "no wp-config.php in detected webroot '$WEBROOT'"
-WP_BIN=$(command -v wp || true); [[ -n "$WP_BIN" ]] || fail "wp-cli ('wp') not found in PATH"
-WP="$WH_PHP_CMD $WP_BIN --path=$WEBROOT"
+# the PHAR, not 'command -v wp' - on a server where /usr/local/bin/wp is a shell wrapper, PHP would
+# echo the wrapper's own source instead of running wp-cli, and every read below would parse that text
+[[ -n "${WH_WP_PHAR:-}" ]] || fail "no usable wp-cli phar on this server ('wp' is absent, or is a shell wrapper that must not be handed to PHP - check 'wh show-env') - an admin can install/replace it with: wh wp-install"
+WP="$WH_PHP_CMD $WH_WP_PHAR --path=$WEBROOT"
 wpq() { $WP "$@" 2>/dev/null </dev/null; }
 
 # ---- config (site-specific, lives beside the site, never in this repo) -----------------------------
@@ -112,7 +114,9 @@ done
 # NOT invalidated by the raw-SQL writes the import performs; reading through it would return
 # pre-import values and turn the checks below into vacuous passes.
 PREFIX=$(wpq db prefix)
-[[ -n "$PREFIX" ]] || fail "wp-cli could not read this site (empty table prefix) - is it healthy under $WH_PHP_CMD? Try: $WP db prefix"
+# a real prefix is [A-Za-z0-9_]+ (WordPress' own install rule) - checking the SHAPE, not just
+# non-emptiness, is what stops a broken wp-cli's stray output from being taken for an answer
+[[ "$PREFIX" =~ ^[A-Za-z0-9_]+$ ]] || fail "wp-cli did not return a usable table prefix (got '${PREFIX:0:40}') - is it healthy under $WH_PHP_CMD? Try: $WP db prefix"
 # NOTE: a reader for SHORT single-line values only (siteurl, db_version, a base64 canary) - mysql batch
 # output escapes tab/newline/backslash and 'head -n1' keeps one line, so do not reuse it for multi-line
 # or backslash-bearing options (the cron array is read separately, via $wpdb). Option names are
