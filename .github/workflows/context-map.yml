@@ -1,0 +1,95 @@
+name: context-map
+
+# Keeps audit/CONTEXT.md fresh. Two tiers:
+#   refresh (default, every relevant push) — deterministic, NO LLM, NO egress: stamps freshness + flags drift.
+#   enrich  (manual dispatch only)         — runs Claude on changed code to rewrite the digest.
+#                                            Needs an ANTHROPIC_API_KEY repo secret; not set up yet.
+# Both land as a reviewed PR. Never commits to the default branch directly.
+
+on:
+  push:
+    branches: [main, master]
+    paths: ['wh-scripts/**', 'wh.sh', 'wh.crond', 'wh.bash_completion', 'wh.pyenv-profile.d', 'docker/**', 'db-refresh/**', 'requirements.txt', '.python-version']
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'refresh (no LLM) or enrich (runs Claude — sends code to the Anthropic API)'
+        type: choice
+        options: [refresh, enrich]
+        default: refresh
+
+# No `schedule:` trigger by design — enrich runs only when you dispatch it manually, so nothing
+# recurring costs API credits or fails on a missing secret. To re-enable a weekly enrich, add:
+#   schedule:
+#     - cron: '17 6 * * 1'   # Mon 06:17 UTC
+# ...and set the ANTHROPIC_API_KEY repo secret first.
+#
+# Triggers are push (default branch) / manual dispatch ONLY — never pull_request, so the
+# ANTHROPIC_API_KEY secret is never exposed to untrusted fork code.
+
+permissions:
+  contents: write          # push the audit/context-map branch
+  pull-requests: write      # open/update the PR
+
+concurrency:
+  group: context-map
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ github.event.inputs.mode || 'refresh' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0       # full history needed for the drift diff
+
+      - name: Deterministic refresh (no LLM, no egress)
+        if: env.MODE == 'refresh'
+        run: |
+          bash audit/tools/refresh-context.sh
+          bash audit/tools/regenerate-graph.sh   # reconcile graph.json skeleton with the file tree
+
+      - name: Enrich digest with Claude
+        if: env.MODE == 'enrich'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set — the enrich tier needs it. (refresh works without it.)"
+            exit 1
+          fi
+          npm install -g @anthropic-ai/claude-code
+          claude -p "$(cat audit/tools/enrich.md)" \
+            --allowedTools "Read,Grep,Glob,Edit,Bash(git diff:*),Bash(jq:*)" \
+            --permission-mode acceptEdits
+          bash audit/tools/refresh-context.sh --mark-enriched
+
+      - name: Open / update review PR if anything changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes — nothing to PR."; exit 0
+          fi
+          BRANCH="audit/context-map"
+          git config user.name  "context-map-bot"
+          git config user.email "context-map-bot@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add audit/
+          git commit -m "chore(audit): refresh context map [$MODE]"
+          git push -f origin "$BRANCH"
+          if gh pr view "$BRANCH" >/dev/null 2>&1; then
+            echo "Existing PR updated by force-push."
+          else
+            gh pr create --base "$BASE" --head "$BRANCH" \
+              --title "chore(audit): refresh context map" \
+              --body "Automated context-map refresh (mode: \`$MODE\`).
+
+          - **refresh** = deterministic, no code left CI (freshness + drift flags only).
+          - **enrich** = Claude re-read changed code to update \`audit/CONTEXT.md\`.
+
+          Review the diff before merging."
+          fi

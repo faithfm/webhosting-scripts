@@ -1,0 +1,1029 @@
+{
+  "meta": {
+    "project": "webhosting-scripts",
+    "description": "Faith FM's 'wh' command suite for Laravel Forge / LEMP web-hosting servers: a bash dispatcher that auto-detects site + project context from the filesystem and nginx config, then routes to per-command bash/python scripts covering code deployment, Docker, backups, WordPress database refresh, New Relic deployment markers, and server maintenance.",
+    "node_count": 58,
+    "groups": {
+      "entry": "Entrypoint / dispatcher",
+      "deploy": "Deployment commands",
+      "docker": "Docker framework",
+      "backup": "Backup framework (restic)",
+      "platform": "Platform install / update",
+      "helper": "Helpers / wrappers",
+      "observability": "New Relic observability",
+      "diag": "Diagnostics / examples",
+      "config": "Config & templates",
+      "external": "External systems / server state",
+      "dbrefresh": "WordPress DB refresh"
+    },
+    "generated_by": "Claude Code static audit (read from source — no egress)"
+  },
+  "nodes": [
+    {
+      "id": "wh",
+      "label": "wh.sh",
+      "group": "entry",
+      "file": "wh.sh",
+      "desc": "The dispatcher. Derives every WH_* variable child scripts rely on — WH_USER/WH_SITE from the CWD path, WH_SITE_VALID + WH_WEBROOT_DIR + WH_PHP_CMD from /etc/nginx/sites-available/$WH_SITE (falling back to an included forge-conf/*/site.conf), and WH_PROJECT_DIR/WH_APP_NAME/WH_LARAVEL_DETECTED/WH_VITE_DETECTED/WH_VUE2|3_EXTRA_BUILD by walking upwards for a .git folder. Then execs wh-scripts/wh-<cmd>.sh (bash, with nvm pre-loaded) or wh-scripts/wh-<cmd>.py (python, under the repo venv).",
+      "trace": ""
+    },
+    {
+      "id": "wh.bash_completion",
+      "label": "wh.bash_completion",
+      "group": "entry",
+      "file": "wh.bash_completion",
+      "desc": "Bash completion for `wh`: lists wh-scripts/wh-* and strips the 'wh-' prefix and extension to build the command word list. Installed to /etc/bash_completion.d/wh.",
+      "trace": ""
+    },
+    {
+      "id": "wh.crond",
+      "label": "wh.crond",
+      "group": "entry",
+      "file": "wh.crond",
+      "desc": "System crontab fragment installed to /etc/cron.d/wh. Runs `wh nr-deployment-forward` as the forge user every minute, with MAILTO empty.",
+      "trace": ""
+    },
+    {
+      "id": "wh.pyenv-profile.d",
+      "label": "wh.pyenv-profile.d",
+      "group": "entry",
+      "file": "wh.pyenv-profile.d",
+      "desc": "Installed to /etc/profile.d/pyenv.sh. Points PYENV_ROOT at the shared /home/shared/.pyenv, adds it to PATH, and runs `pyenv init -` so every login shell resolves the shared Python.",
+      "trace": ""
+    },
+    {
+      "id": "wh-checkout-github",
+      "label": "wh-checkout-github",
+      "group": "deploy",
+      "file": "wh-scripts/wh-checkout-github.sh",
+      "desc": "Forge deploy-script entrypoint. Fetches and hard-resets to origin/<branch> (default master) via `wh git`, so force-pushes deploy cleanly. Relies on the deploy script having cd'd into the site folder first.",
+      "trace": ""
+    },
+    {
+      "id": "wh-checkout-PR",
+      "label": "wh-checkout-PR",
+      "group": "deploy",
+      "file": "wh-scripts/wh-checkout-PR.sh",
+      "desc": "git post-receive hook entrypoint. Reads oldrev/newrev/ref lines from STDIN and checks out each newrev with `wh git checkout -f` + `git clean -f -d`. With --MASTER-BRANCH-ONLY it skips refs that don't end in /master — the guard used on production WordPress sites.",
+      "trace": ""
+    },
+    {
+      "id": "wh-composer-deploy",
+      "label": "wh-composer-deploy",
+      "group": "deploy",
+      "file": "wh-scripts/wh-composer-deploy.sh",
+      "desc": "The main post-checkout PHP deploy. cd's to WH_PROJECT_DIR, runs `wh composer install --no-interaction --prefer-dist --optimize-autoloader`, then for Laravel runs artisan queue:restart + cache:clear. If .gitignore mentions public/build it installs nvm-if-missing, `nvm install/use`, `npm ci` and runs whichever of `prod`/`build` npm scripts exist; repeats the npm build inside vue2/ and vue3/ when those folders were detected. Finishes with `wh fpm-reload` and `wh nr-deployment-capture`.",
+      "trace": ""
+    },
+    {
+      "id": "wh-composer-deploy-sessions",
+      "label": "wh-composer-deploy-sessions",
+      "group": "deploy",
+      "file": "wh-scripts/wh-composer-deploy-sessions.sh",
+      "desc": "Production-Laravel variant: deletes every file under $WH_PROJECT_DIR/storage/framework/sessions/ (forcing all users to re-login) and then delegates to wh-composer-deploy.",
+      "trace": ""
+    },
+    {
+      "id": "wh-docker-deploy",
+      "label": "wh-docker-deploy",
+      "group": "docker",
+      "file": "wh-scripts/wh-docker-deploy.sh",
+      "desc": "Deploys the current project's container: calls `wh docker-copy-config` to materialise Dockerfile + docker-compose.yml from the shared templates, then `docker compose up --build --detach`.",
+      "trace": ""
+    },
+    {
+      "id": "wh-docker-down",
+      "label": "wh-docker-down",
+      "group": "docker",
+      "file": "wh-scripts/wh-docker-down.sh",
+      "desc": "Stops the current project's container stack (`docker compose down`).",
+      "trace": ""
+    },
+    {
+      "id": "wh-docker-summary",
+      "label": "wh-docker-summary",
+      "group": "docker",
+      "file": "wh-scripts/wh-docker-summary.py",
+      "desc": "Server-wide report: scans /home/forge/dockerprojects/*/.env, parses each with the same quoting/comment rules bash `source` would apply, pairs each project folder with the proxy_pass port found in its nginx site file, and prints a tabulate grid sorted by DOCKER_PORT. Unreadable nginx configs and missing ports render as '-'.",
+      "trace": ""
+    },
+    {
+      "id": "wh-bup",
+      "label": "wh-bup",
+      "group": "backup",
+      "file": "wh-scripts/wh-bup.sh",
+      "desc": "Bare `resticprofile` invocation — shows the snapshot list for the configured profile.",
+      "trace": ""
+    },
+    {
+      "id": "wh-bup-backup",
+      "label": "wh-bup-backup",
+      "group": "backup",
+      "file": "wh-scripts/wh-bup-backup.sh",
+      "desc": "Manual backup run: `sudo -E resticprofile -v backup`, then chowns ~/.cache/restic back to $USER so the root-run backup doesn't leave an unusable cache.",
+      "trace": ""
+    },
+    {
+      "id": "wh-bup-config",
+      "label": "wh-bup-config",
+      "group": "backup",
+      "file": "wh-scripts/wh-bup-config.sh",
+      "desc": "Creates ~/.config/resticprofile if needed, opens profiles.yaml in nano, then re-runs `wh bup-reschedule` so edited schedule times take effect.",
+      "trace": ""
+    },
+    {
+      "id": "wh-bup-reschedule",
+      "label": "wh-bup-reschedule",
+      "group": "backup",
+      "file": "wh-scripts/wh-bup-reschedule.sh",
+      "desc": "`sudo -E resticprofile unschedule` followed by `schedule` — rebuilds the systemd timers from the current profiles.yaml.",
+      "trace": ""
+    },
+    {
+      "id": "wh-bup-unlock",
+      "label": "wh-bup-unlock",
+      "group": "backup",
+      "file": "wh-scripts/wh-bup-unlock.sh",
+      "desc": "Clears a stale restic repository lock (`resticprofile unlock`).",
+      "trace": ""
+    },
+    {
+      "id": "wh-update",
+      "label": "wh-update",
+      "group": "platform",
+      "file": "wh-scripts/wh-update.sh",
+      "desc": "The installer/updater. Checks WH_BASE_DIR is writable, hard-resets the repo to origin/master, then symlinks wh.sh → /usr/local/bin/wh and wh.bash_completion → /etc/bash_completion.d/wh, copies wh.crond → /etc/cron.d/wh (root:root 644) and wh.pyenv-profile.d → /etc/profile.d/pyenv.sh, pip-installs requirements.txt into venv/ if it exists, tightens repo permissions (o=x on the base dir, o=rx on wh-scripts), and ensures /var/log/app-deploys exists as forge:forge mode 1777 with an errors/ subfolder.",
+      "trace": ""
+    },
+    {
+      "id": "wh-python-update",
+      "label": "wh-python-update",
+      "group": "platform",
+      "file": "wh-scripts/wh-python-update.sh",
+      "desc": "Occasional Python maintenance: apt-installs the pyenv build dependencies, clones or `git pull`s pyenv into $PYENV_DIR and rebuilds src/, installs the latest patch of $PYENV_VERSION, aborts with a 'restart your shell' warning if python3 doesn't yet match, then deletes and recreates venv/ and pip-installs requirements.txt.",
+      "trace": ""
+    },
+    {
+      "id": "wh-update-nvm",
+      "label": "wh-update-nvm",
+      "group": "platform",
+      "file": "wh-scripts/wh-update-nvm.sh",
+      "desc": "Installs or updates nvm (resolving the latest tag from the GitHub API, then piping install.sh to bash) and sets the default node to the latest LTS. `--if-missing` makes it a no-op when ~/.nvm already exists — how wh-composer-deploy calls it.",
+      "trace": ""
+    },
+    {
+      "id": "wh-git-config",
+      "label": "wh-git-config",
+      "group": "platform",
+      "file": "wh-scripts/wh-git-config.sh",
+      "desc": "One-off per-account git setup. Prints the exact commands, asks for y/n confirmation, then sets global user.email ($USER@$HOSTNAME), user.name, and advice.detachedHead=false — the identity that server-side checkouts and commits use.",
+      "trace": ""
+    },
+    {
+      "id": "wh-docker-install",
+      "label": "wh-docker-install",
+      "group": "platform",
+      "file": "wh-scripts/wh-docker-install.sh",
+      "desc": "Installs Docker Engine per the official Ubuntu instructions (keyring, apt source, docker-ce + compose plugins) after a y/n prompt, then adds forge to the docker group and prints service status.",
+      "trace": ""
+    },
+    {
+      "id": "wh-bup-install",
+      "label": "wh-bup-install",
+      "group": "platform",
+      "file": "wh-scripts/wh-bup-install.sh",
+      "desc": "Installs restic + resticprofile: maps `uname -m` to a Go arch, resolves each project's latest release by following the GitHub /releases/latest redirect, downloads and unpacks both binaries into /usr/local/bin as root:root 755, and writes /etc/sudoers.d/resticprofile granting forge NOPASSWD:SETENV for resticprofile.",
+      "trace": ""
+    },
+    {
+      "id": "wh-bup-selfupdate",
+      "label": "wh-bup-selfupdate",
+      "group": "platform",
+      "file": "wh-scripts/wh-bup-selfupdate.sh",
+      "desc": "Runs the built-in `restic self-update` and `resticprofile self-update` under sudo.",
+      "trace": ""
+    },
+    {
+      "id": "wh-php",
+      "label": "wh-php",
+      "group": "helper",
+      "file": "wh-scripts/wh-php.sh",
+      "desc": "Runs PHP as the *site's* version. Execs $WH_PHP_CMD (detected from nginx fastcgi_pass) when it exists on PATH; otherwise warns to stderr and falls back to the default `php`. Exists because a bare `php` on a multi-PHP server silently picks the default CLI version.",
+      "trace": ""
+    },
+    {
+      "id": "wh-composer",
+      "label": "wh-composer",
+      "group": "helper",
+      "file": "wh-scripts/wh-composer.sh",
+      "desc": "Runs composer under the site's PHP version: resolves the composer binary with `command -v`, then execs `$WH_PHP_CMD <composer_bin> \"$@\"`. This is what keeps vendor/ — and any post-autoload-dump artisan hooks — matched to the runtime the site actually serves. Errors if composer is absent; warns and falls back if WH_PHP_CMD is unset or missing.",
+      "trace": ""
+    },
+    {
+      "id": "wh-git",
+      "label": "wh-git",
+      "group": "helper",
+      "file": "wh-scripts/wh-git.py",
+      "desc": "Git wrapper that resolves --git-dir/--work-tree for the current location. First tries wh-git-repos.yml in the enclosing /home/<user> folder, matching the CWD against each entry's bare or work path with a directory-boundary-safe comparison (so my-plugin-v2 doesn't match my-plugin). Otherwise, if CWD is the home folder itself it switches to the first domain-looking subfolder, then walks upwards for a .git directory. Exits 1 with an explanatory error when nothing resolves; otherwise runs git and propagates its return code.",
+      "trace": ""
+    },
+    {
+      "id": "wh-fpm-reload",
+      "label": "wh-fpm-reload",
+      "group": "helper",
+      "file": "wh-scripts/wh-fpm-reload.sh",
+      "desc": "Reloads $WH_PHP_CMD-fpm. Uses `mkdir /tmp/fpmlockdir` as a mutex so concurrent deploys don't stack reloads — if the mkdir fails it prints 'Failed to acquire lock' and exits 1 rather than waiting.",
+      "trace": ""
+    },
+    {
+      "id": "wh-docker-get-context",
+      "label": "wh-docker-get-context",
+      "group": "helper",
+      "file": "wh-scripts/wh-docker-get-context.sh",
+      "desc": "Sourced (not executed) by the other docker scripts. Sources $WH_PROJECT_ENV, then validates DOCKERFILE_TEMPLATE / DOCKERCOMPOSE_TEMPLATE and expands them into DOCKERFILE_TEMPLATE_PATH / DOCKERCOMPOSE_TEMPLATE_PATH under $WH_BASE_DIR/docker, exiting 1 with a specific message for each missing piece.",
+      "trace": ""
+    },
+    {
+      "id": "wh-docker-copy-config",
+      "label": "wh-docker-copy-config",
+      "group": "helper",
+      "file": "wh-scripts/wh-docker-copy-config.sh",
+      "desc": "Sources wh-docker-get-context.sh then copies the two resolved templates into the project as Dockerfile and docker-compose.yml — i.e. project container config is regenerated from the shared templates on every deploy.",
+      "trace": ""
+    },
+    {
+      "id": "wh-nr-deployment-capture",
+      "label": "wh-nr-deployment-capture",
+      "group": "observability",
+      "file": "wh-scripts/wh-nr-deployment-capture.py",
+      "desc": "Captures the deployed commit. Strips git's local env vars (via `git rev-parse --local-env-vars`) so it works inside a post-receive hook, reads hash/author/date/message/timestamp from WH_PROJECT_DIR, optionally reads remote.origin.url, detects vendor/faithfm/new-relic-helper, and writes /var/log/app-deploys/<epoch>-<user>.log as JSON chmod 644.",
+      "trace": ""
+    },
+    {
+      "id": "wh-nr-deployment-forward",
+      "label": "wh-nr-deployment-forward",
+      "group": "observability",
+      "file": "wh-scripts/wh-nr-deployment-forward.py",
+      "desc": "Cron forwarder (runs every minute as forge). Loads NR_API_KEY from /home/forge/.env.wh-nr, then for each /var/log/app-deploys/*.log: parses it, looks up the New Relic entity GUID for 'PHP-H <app>' or 'PHP-N <app>' depending on nr_helper_detected, and posts a changeTrackingCreateDeployment GraphQL mutation with a GitHub commit deepLink. Successful files are deleted; failures are retried until 60s (parse errors) or 7 days (API errors) old, after which they move to errors/ with a syslog message.",
+      "trace": ""
+    },
+    {
+      "id": "wh-show-env",
+      "label": "wh-show-env",
+      "group": "diag",
+      "file": "wh-scripts/wh-show-env.sh",
+      "desc": "Prints every WH_* variable the dispatcher computed — the first thing to run when a script misbehaves on a given site (e.g. to see whether WH_PHP_CMD or WH_PROJECT_DIR was detected).",
+      "trace": ""
+    },
+    {
+      "id": "wh-hello",
+      "label": "wh-hello",
+      "group": "diag",
+      "file": "wh-scripts/wh-hello.sh",
+      "desc": "Minimal bash command — the template for adding a new `wh xyz` bash script.",
+      "trace": ""
+    },
+    {
+      "id": "wh-hello-python",
+      "label": "wh-hello-python",
+      "group": "diag",
+      "file": "wh-scripts/wh-hello-python.py",
+      "desc": "Minimal python command — also confirms which interpreter the venv actually resolves to.",
+      "trace": ""
+    },
+    {
+      "id": ".python-version",
+      "label": ".python-version",
+      "group": "config",
+      "file": ".python-version",
+      "desc": "Pins PYENV_VERSION for the whole suite; read by wh.sh on every invocation and by wh-python-update when installing Python.",
+      "trace": ""
+    },
+    {
+      "id": "requirements.txt",
+      "label": "requirements.txt",
+      "group": "config",
+      "file": "requirements.txt",
+      "desc": "Python deps for the venv the .py commands run under: PyYAML (wh-git), requests + python-dotenv (nr-deployment-forward), tabulate (docker-summary).",
+      "trace": ""
+    },
+    {
+      "id": "docker-env-sample",
+      "label": "docker/.env.sample",
+      "group": "config",
+      "file": "docker/.env.sample",
+      "desc": "Reference .env for a containerised project: APP_* metadata, DOCKER_PORT, and the DOCKERFILE_TEMPLATE / DOCKERCOMPOSE_TEMPLATE names that select which shared templates get copied in.",
+      "trace": ""
+    },
+    {
+      "id": "template-express01-dockerfile",
+      "label": "template express01 Dockerfile",
+      "group": "config",
+      "file": "docker/template express01 Dockerfile",
+      "desc": "Node 18.16.1 bookworm-slim image: npm ci --only=production, EXPOSE ${DOCKER_PORT}, `node server.js`. Selected by DOCKERFILE_TEMPLATE=express01.",
+      "trace": ""
+    },
+    {
+      "id": "template-express01-compose",
+      "label": "template express01 docker-compose.yml",
+      "group": "config",
+      "file": "docker/template express01 docker-compose.yml",
+      "desc": "Single `app` service built from the copied Dockerfile, restart:always, publishing ${DOCKER_PORT}:${DOCKER_PORT} under image ${APP_IMAGE_NAME}. Selected by DOCKERCOMPOSE_TEMPLATE=express01.",
+      "trace": ""
+    },
+    {
+      "id": "nginx",
+      "label": "nginx site configs",
+      "group": "external",
+      "file": null,
+      "desc": "/etc/nginx/sites-available/<site> (plus included forge-conf/*/site.conf). The source of truth the suite reads for site validity, webroot, the site's PHP version (fastcgi_pass) and, for docker projects, the proxy_pass port.",
+      "trace": ""
+    },
+    {
+      "id": "php-multi",
+      "label": "PHP runtimes (multi-version)",
+      "group": "external",
+      "file": null,
+      "desc": "The several PHP versions installed per server — php8.x CLI binaries and php8.x-fpm services. The default CLI version is frequently older than the version a given site runs, which is the whole reason wh php / wh composer exist.",
+      "trace": ""
+    },
+    {
+      "id": "forge-hooks",
+      "label": "Forge deploy scripts & post-receive hooks",
+      "group": "external",
+      "file": null,
+      "desc": "The two triggers for all deployments: Laravel Forge deploy scripts fired by GitHub webhooks (production Laravel + Docker), and server-side git post-receive hooks (staging, and all WordPress plugins/themes). Both are two- or three-line scripts calling wh commands.",
+      "trace": ""
+    },
+    {
+      "id": "github",
+      "label": "GitHub",
+      "group": "external",
+      "file": null,
+      "desc": "Origin remote for project checkouts and for this repo's own self-update; also the release API used by wh-update-nvm and wh-bup-install, and the base for New Relic deployment deepLinks.",
+      "trace": ""
+    },
+    {
+      "id": "wh-git-repos.yml",
+      "label": "wh-git-repos.yml",
+      "group": "external",
+      "file": null,
+      "desc": "Per-user file in /home/<user>/ pairing each bare repo with its working tree — how WordPress plugin/theme repos under git/plugins/ and git/themes/ get checked out into htdocs/wp-content/. A bare repo missing from this file will not deploy correctly.",
+      "trace": ""
+    },
+    {
+      "id": "project-env",
+      "label": "project .env (WH_PROJECT_ENV)",
+      "group": "external",
+      "file": null,
+      "desc": "The deployed project's own .env. wh.sh reads APP_NAME from it (used as the New Relic app name); docker projects also supply DOCKER_PORT and the two template selectors from it.",
+      "trace": ""
+    },
+    {
+      "id": "app-deploys-log",
+      "label": "/var/log/app-deploys",
+      "group": "external",
+      "file": null,
+      "desc": "The spool between capture and forward. forge:forge mode 1777 with the sticky bit, so every site user can drop a log file but cannot delete another user's; an errors/ subfolder holds quarantined files.",
+      "trace": ""
+    },
+    {
+      "id": "env-wh-nr",
+      "label": "/home/forge/.env.wh-nr",
+      "group": "external",
+      "file": null,
+      "desc": "Holds NR_API_KEY for the New Relic forwarder. A manual post-install step — the forwarder exits 1 and syslogs if the file or key is missing.",
+      "trace": ""
+    },
+    {
+      "id": "newrelic-api",
+      "label": "New Relic GraphQL API",
+      "group": "external",
+      "file": null,
+      "desc": "api.newrelic.com/graphql — queried for the APM entity GUID by app name, then sent changeTrackingCreateDeployment mutations to place deployment markers.",
+      "trace": ""
+    },
+    {
+      "id": "pyenv-venv",
+      "label": "shared pyenv + venv",
+      "group": "external",
+      "file": null,
+      "desc": "/home/shared/.pyenv plus the repo's venv/ folder. wh.sh activates the venv before running any .py command; /etc/profile.d/pyenv.sh makes pyenv available to login shells.",
+      "trace": ""
+    },
+    {
+      "id": "nvm",
+      "label": "nvm + Node",
+      "group": "external",
+      "file": null,
+      "desc": "~/.nvm. wh.sh sources it and re-exports the nvm function into bash child scripts, so wh-composer-deploy can `nvm install/use` per the project's .nvmrc before running npm ci.",
+      "trace": ""
+    },
+    {
+      "id": "docker-engine",
+      "label": "Docker Engine / Compose",
+      "group": "external",
+      "file": null,
+      "desc": "The docker daemon and compose plugin driving containerised (Express / Apollo GraphQL) sites, which nginx reverse-proxies to on each project's DOCKER_PORT.",
+      "trace": ""
+    },
+    {
+      "id": "restic-repo",
+      "label": "restic / resticprofile",
+      "group": "external",
+      "file": null,
+      "desc": "The backup binaries in /usr/local/bin, ~/.config/resticprofile/profiles.yaml, the scheduled timers, and the remote restic repository they write to.",
+      "trace": ""
+    },
+    {
+      "id": "wh-db-refresh-export",
+      "label": "wh-db-refresh-export",
+      "group": "dbrefresh",
+      "file": "wh-scripts/wh-db-refresh-export.sh",
+      "desc": "Exports the current site's WordPress database as a hand-off bundle for a sibling site on the same server under a different unix user (prod → staging). Run as the source site's own user. Pre-flights options/setfacl/free space (needs ~2x the DB size in /tmp), dumps every prefixed table except --exclude via wp-cli mysqldump (--single-transaction so the live source is never locked, --set-gtid-purged=OFF to avoid needing SUPER on import), refuses to hand off a dump lacking the '-- Dump completed' tail, writes a manifest (table list, key row counts, source URL, core/db version, true dump byte size, views), then tars both into /tmp mode 600 under umask 077 with exactly one setfacl reader (--grant-user) — verified with getfacl before it is promised. Schedules its own deletion after --ttl minutes (default 120) via a detached sleeper whose liveness is checked. Any failure path removes everything via an EXIT trap.",
+      "trace": ""
+    },
+    {
+      "id": "wh-db-refresh-import",
+      "label": "wh-db-refresh-import",
+      "group": "dbrefresh",
+      "file": "wh-scripts/wh-db-refresh-import.sh",
+      "desc": "Imports a hand-off bundle into the current site, re-points URLs, and runs acceptance checks — replacing third-party DB-sync plugins. Run as the target site's own user; all site-specific behaviour comes from an unversioned '.wh-db-refresh' beside the site, never from defaults. Gates first (manifest source_url matches config, hand-off age, prefix match, EXPECT_EXCLUDED really absent, target core >= source, free space). Then WordPress maintenance mode (a .maintenance 503 before plugins/cron, re-stamped every 4 min by a keepalive so long imports stay covered and hard-killed runs self-recover), import, cache reset, truncates, optional cron clear, core update-db. URLs are re-pointed serialized-safe via one host pass plus a scheme pass. Acceptance prints PASS/FAIL/WARN/INFO and exits 1 on any FAIL; maintenance is lifted ONLY if every *safety* check passed (import complete, truncates done, host rewritten, canary armed) — otherwise the site stays down with a far-future stamp and the recovery command is printed. Options are read straight from MySQL throughout, never get_option(), so a persistent object cache cannot turn the checks into vacuous passes.",
+      "trace": ""
+    },
+    {
+      "id": ".wh-db-refresh.sample",
+      "label": "db-refresh/.wh-db-refresh.sample",
+      "group": "config",
+      "file": "db-refresh/.wh-db-refresh.sample",
+      "desc": "Reference config copied to '<site>/.wh-db-refresh' on the importing side: SOURCE_URL, TRUNCATE_TABLES, EXPECT_EXCLUDED, CANARY_OPTION (clone-guard), ROW_DRIFT_PCT, MAX_HANDOFF_AGE_HOURS, CLEAR_CRON, SKIP_CACHE_FLUSH.",
+      "trace": ""
+    },
+    {
+      "id": "wh-db-refresh-config",
+      "label": "<site>/.wh-db-refresh",
+      "group": "external",
+      "file": null,
+      "desc": "Per-target-site import config, unversioned and living beside the site (like wh-git-repos.yml). Supplies every gate the import enforces; the import refuses to run without it. Table/option names are charset-validated before reaching SQL.",
+      "trace": ""
+    },
+    {
+      "id": "handoff-bundle",
+      "label": "/tmp db-refresh hand-off",
+      "group": "external",
+      "file": null,
+      "desc": "The tar.gz bridging the two sites: manifest first (so the import can read it without unpacking the dump), then the SQL dump. Mode 600 plus a single setfacl read grant for the importing user; self-destructs on the exporter's TTL. Only its owner can delete it under sticky /tmp, which is why the export side self-cleans.",
+      "trace": ""
+    },
+    {
+      "id": "wp-cli",
+      "label": "wp-cli + WordPress site/DB",
+      "group": "external",
+      "file": null,
+      "desc": "The 'wp' binary, the site's WordPress install under WH_WEBROOT_DIR, and its MySQL database. Both db-refresh commands invoke it as '$WH_PHP_CMD $(command -v wp) --path=<webroot>' so it runs under the site's PHP, and read options via raw SQL rather than get_option().",
+      "trace": ""
+    }
+  ],
+  "links": [
+    {
+      "s": "wh",
+      "t": "wh-checkout-github",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-checkout-PR",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-composer-deploy",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-composer-deploy-sessions",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-docker-deploy",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-docker-down",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-docker-summary",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-docker-copy-config",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-docker-get-context",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-docker-install",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-bup",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-bup-backup",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-bup-config",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-bup-reschedule",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-bup-unlock",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-bup-install",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-bup-selfupdate",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-update",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-python-update",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-update-nvm",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-git-config",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-php",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-composer",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-git",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-fpm-reload",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-nr-deployment-capture",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-nr-deployment-forward",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-show-env",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-hello",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-hello-python",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "nginx",
+      "r": "detects-site-from"
+    },
+    {
+      "s": "wh",
+      "t": "project-env",
+      "r": "reads APP_NAME"
+    },
+    {
+      "s": "wh",
+      "t": ".python-version",
+      "r": "reads PYENV_VERSION"
+    },
+    {
+      "s": "wh",
+      "t": "pyenv-venv",
+      "r": "activates for .py commands"
+    },
+    {
+      "s": "wh",
+      "t": "nvm",
+      "r": "exports into bash children"
+    },
+    {
+      "s": "wh.bash_completion",
+      "t": "wh",
+      "r": "completes"
+    },
+    {
+      "s": "wh.crond",
+      "t": "wh-nr-deployment-forward",
+      "r": "schedules every minute"
+    },
+    {
+      "s": "wh.pyenv-profile.d",
+      "t": "pyenv-venv",
+      "r": "initialises"
+    },
+    {
+      "s": "forge-hooks",
+      "t": "wh-checkout-github",
+      "r": "triggers"
+    },
+    {
+      "s": "forge-hooks",
+      "t": "wh-checkout-PR",
+      "r": "triggers"
+    },
+    {
+      "s": "forge-hooks",
+      "t": "wh-composer-deploy",
+      "r": "triggers"
+    },
+    {
+      "s": "forge-hooks",
+      "t": "wh-composer-deploy-sessions",
+      "r": "triggers"
+    },
+    {
+      "s": "forge-hooks",
+      "t": "wh-docker-deploy",
+      "r": "triggers"
+    },
+    {
+      "s": "forge-hooks",
+      "t": "wh-fpm-reload",
+      "r": "triggers"
+    },
+    {
+      "s": "wh-checkout-github",
+      "t": "wh-git",
+      "r": "calls"
+    },
+    {
+      "s": "wh-checkout-github",
+      "t": "github",
+      "r": "fetches + hard-resets from"
+    },
+    {
+      "s": "wh-checkout-PR",
+      "t": "wh-git",
+      "r": "calls"
+    },
+    {
+      "s": "wh-git",
+      "t": "wh-git-repos.yml",
+      "r": "resolves work-tree from"
+    },
+    {
+      "s": "wh-git-config",
+      "t": "wh-git",
+      "r": "configures git identity for"
+    },
+    {
+      "s": "wh-composer-deploy-sessions",
+      "t": "wh-composer-deploy",
+      "r": "delegates to"
+    },
+    {
+      "s": "wh-composer-deploy",
+      "t": "wh-composer",
+      "r": "calls"
+    },
+    {
+      "s": "wh-composer-deploy",
+      "t": "wh-php",
+      "r": "calls (artisan)"
+    },
+    {
+      "s": "wh-composer-deploy",
+      "t": "wh-update-nvm",
+      "r": "calls --if-missing"
+    },
+    {
+      "s": "wh-composer-deploy",
+      "t": "nvm",
+      "r": "nvm install/use + npm ci"
+    },
+    {
+      "s": "wh-composer-deploy",
+      "t": "wh-fpm-reload",
+      "r": "calls"
+    },
+    {
+      "s": "wh-composer-deploy",
+      "t": "wh-nr-deployment-capture",
+      "r": "calls"
+    },
+    {
+      "s": "wh-php",
+      "t": "php-multi",
+      "r": "execs site PHP version"
+    },
+    {
+      "s": "wh-composer",
+      "t": "php-multi",
+      "r": "execs composer under site PHP"
+    },
+    {
+      "s": "wh-fpm-reload",
+      "t": "php-multi",
+      "r": "reloads FPM service"
+    },
+    {
+      "s": "wh-docker-deploy",
+      "t": "wh-docker-copy-config",
+      "r": "calls"
+    },
+    {
+      "s": "wh-docker-deploy",
+      "t": "docker-engine",
+      "r": "compose up --build"
+    },
+    {
+      "s": "wh-docker-down",
+      "t": "docker-engine",
+      "r": "compose down"
+    },
+    {
+      "s": "wh-docker-copy-config",
+      "t": "wh-docker-get-context",
+      "r": "sources"
+    },
+    {
+      "s": "wh-docker-copy-config",
+      "t": "template-express01-dockerfile",
+      "r": "copies into project"
+    },
+    {
+      "s": "wh-docker-copy-config",
+      "t": "template-express01-compose",
+      "r": "copies into project"
+    },
+    {
+      "s": "wh-docker-get-context",
+      "t": "project-env",
+      "r": "sources + validates"
+    },
+    {
+      "s": "wh-docker-get-context",
+      "t": "template-express01-dockerfile",
+      "r": "resolves + checks"
+    },
+    {
+      "s": "wh-docker-get-context",
+      "t": "template-express01-compose",
+      "r": "resolves + checks"
+    },
+    {
+      "s": "docker-env-sample",
+      "t": "project-env",
+      "r": "template for"
+    },
+    {
+      "s": "wh-docker-summary",
+      "t": "nginx",
+      "r": "reads proxy_pass ports"
+    },
+    {
+      "s": "wh-docker-summary",
+      "t": "project-env",
+      "r": "parses dockerprojects .env"
+    },
+    {
+      "s": "wh-docker-install",
+      "t": "docker-engine",
+      "r": "installs"
+    },
+    {
+      "s": "wh-nr-deployment-capture",
+      "t": "app-deploys-log",
+      "r": "writes JSON log"
+    },
+    {
+      "s": "wh-nr-deployment-forward",
+      "t": "app-deploys-log",
+      "r": "consumes + quarantines"
+    },
+    {
+      "s": "wh-nr-deployment-forward",
+      "t": "env-wh-nr",
+      "r": "reads NR_API_KEY"
+    },
+    {
+      "s": "wh-nr-deployment-forward",
+      "t": "newrelic-api",
+      "r": "posts deployment marker"
+    },
+    {
+      "s": "wh-nr-deployment-forward",
+      "t": "github",
+      "r": "builds commit deepLink"
+    },
+    {
+      "s": "wh-bup",
+      "t": "restic-repo",
+      "r": "lists snapshots"
+    },
+    {
+      "s": "wh-bup-backup",
+      "t": "restic-repo",
+      "r": "runs backup"
+    },
+    {
+      "s": "wh-bup-config",
+      "t": "restic-repo",
+      "r": "edits profiles.yaml"
+    },
+    {
+      "s": "wh-bup-config",
+      "t": "wh-bup-reschedule",
+      "r": "calls"
+    },
+    {
+      "s": "wh-bup-reschedule",
+      "t": "restic-repo",
+      "r": "unschedule + schedule"
+    },
+    {
+      "s": "wh-bup-unlock",
+      "t": "restic-repo",
+      "r": "unlocks"
+    },
+    {
+      "s": "wh-bup-install",
+      "t": "restic-repo",
+      "r": "installs binaries + sudoers"
+    },
+    {
+      "s": "wh-bup-install",
+      "t": "github",
+      "r": "downloads latest releases"
+    },
+    {
+      "s": "wh-bup-selfupdate",
+      "t": "restic-repo",
+      "r": "self-updates"
+    },
+    {
+      "s": "wh-update",
+      "t": "github",
+      "r": "hard-resets repo from"
+    },
+    {
+      "s": "wh-update",
+      "t": "wh",
+      "r": "symlinks to /usr/local/bin/wh"
+    },
+    {
+      "s": "wh-update",
+      "t": "wh.bash_completion",
+      "r": "symlinks to /etc/bash_completion.d"
+    },
+    {
+      "s": "wh-update",
+      "t": "wh.crond",
+      "r": "installs to /etc/cron.d/wh"
+    },
+    {
+      "s": "wh-update",
+      "t": "wh.pyenv-profile.d",
+      "r": "installs to /etc/profile.d"
+    },
+    {
+      "s": "wh-update",
+      "t": "requirements.txt",
+      "r": "pip installs"
+    },
+    {
+      "s": "wh-update",
+      "t": "pyenv-venv",
+      "r": "installs into venv"
+    },
+    {
+      "s": "wh-update",
+      "t": "app-deploys-log",
+      "r": "creates + fixes permissions"
+    },
+    {
+      "s": "wh-python-update",
+      "t": "pyenv-venv",
+      "r": "rebuilds pyenv + venv"
+    },
+    {
+      "s": "wh-python-update",
+      "t": ".python-version",
+      "r": "installs pinned version"
+    },
+    {
+      "s": "wh-python-update",
+      "t": "requirements.txt",
+      "r": "pip installs"
+    },
+    {
+      "s": "wh-update-nvm",
+      "t": "nvm",
+      "r": "installs/updates"
+    },
+    {
+      "s": "wh-update-nvm",
+      "t": "github",
+      "r": "resolves latest release"
+    },
+    {
+      "s": "wh-show-env",
+      "t": "wh",
+      "r": "prints variables set by"
+    },
+    {
+      "s": "wh",
+      "t": "wh-db-refresh-export",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh",
+      "t": "wh-db-refresh-import",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh-db-refresh-export",
+      "t": "wp-cli",
+      "r": "dumps via wp-cli under site PHP"
+    },
+    {
+      "s": "wh-db-refresh-export",
+      "t": "handoff-bundle",
+      "r": "creates + ACL-grants + TTLs"
+    },
+    {
+      "s": "wh-db-refresh-import",
+      "t": "handoff-bundle",
+      "r": "unpacks + verifies"
+    },
+    {
+      "s": "wh-db-refresh-import",
+      "t": "wp-cli",
+      "r": "imports + re-points URLs via"
+    },
+    {
+      "s": "wh-db-refresh-import",
+      "t": "wh-db-refresh-config",
+      "r": "reads gates from"
+    },
+    {
+      "s": ".wh-db-refresh.sample",
+      "t": "wh-db-refresh-config",
+      "r": "template for"
+    }
+  ]
+}
