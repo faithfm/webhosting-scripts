@@ -45,6 +45,11 @@ wh docker-get-context             # HELPER:  load and validate context of the cu
 wh docker-copy-config             # HELPER:  copy docker configuration templates to current project
 wh docker-install                 # install or update docker
 
+# WordPress (wp-cli)
+#   [NOTE 5] below - one current wp-cli phar per server, run under each SITE's own PHP version
+wh wp <args>                      # run wp-cli against the current site, using the site's PHP version
+wh wp-install                     # install (or update) wp-cli on this server  (run from an admin account)
+
 # WordPress database refresh between sibling sites on the same server (eg: prod -> staging)
 #   [NOTE 4] below - db-refresh HOWTO - config file, safety model, what it checks
 wh db-refresh-export              # as the SOURCE site's user: dump the DB into a locked /tmp hand-off (source is only read)
@@ -69,6 +74,8 @@ Many of these  web-hosting scripts are focused on deploying code updates to webs
 > NOTE 3: Our servers have **several PHP versions installed**, and each site targets a specific one (detected as `WH_PHP_CMD` from the site's nginx `fastcgi_pass` directive).  PHP-FPM always uses the correct version, but the **command line** does not - a bare `php` or `composer` silently uses the server's *default* CLI version instead, which is often an older one.  This matters most for `composer`, which resolves dependencies (and runs composer scripts such as Laravel's `post-autoload-dump` hooks) against whichever PHP version executes it - so running the wrong one writes a `vendor/` folder built for the wrong runtime.  Use `wh php` and `wh composer` instead of `php` and `composer` for anything related to a site.
 
 > NOTE 4: How to refresh a staging/dev WordPress site's database from a sibling production site (config file, safety model, what the checks mean) see: [db-refresh HOWTO.md](<db-refresh/db-refresh HOWTO.md>)
+
+> NOTE 5: **wp-cli** is one current phar per server (`/usr/local/bin/wp`, owned `root:root`) serving every site; what varies per site is the PHP that *executes* it, which is what `wh wp` resolves.  Unlike `wh php` / `wh composer` it **fails closed** when the site's PHP version cannot be detected.  `wh wp-install` installs or updates the phar - re-running it *is* the updater.  Why, in full: the header comments of [wh-wp.sh](wh-scripts/wh-wp.sh) and [wh-wp-install.sh](wh-scripts/wh-wp-install.sh).
 
 
 Bash completion is also included - ie type:

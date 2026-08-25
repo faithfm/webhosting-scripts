@@ -73,6 +73,23 @@ else
     export WH_SITE_VALID=false
 fi
 
+###  Locate the wp-cli phar  (machine-wide - not site-specific)  ###
+
+# 'wh wp' executes the PHAR under the SITE's PHP, so what we need here is the phar ITSELF - never a
+# shell wrapper around it. The distinction matters because handing a wrapper to PHP fails SILENTLY:
+# PHP strips the '#!' line and echoes the rest of the file as plain text, so a caller parsing the
+# output (eg: 'wp db prefix') gets a plausible non-empty string back instead of an error. Anything
+# that is not a phar therefore leaves this empty, and the commands that need it fail closed.
+export WH_WP_PHAR=""
+WH_WP_CANDIDATE=$(command -v wp 2>/dev/null)
+if [[ -n "$WH_WP_CANDIDATE" ]]; then
+    WH_WP_CANDIDATE=$(readlink -f "$WH_WP_CANDIDATE")
+    if head -n1 "$WH_WP_CANDIDATE" 2>/dev/null | grep -q '^#!.*php'; then
+        export WH_WP_PHAR="$WH_WP_CANDIDATE"                    # a real phar - '#!/usr/bin/env php'
+    fi
+fi
+unset WH_WP_CANDIDATE
+
 # Find the project directory (searching upwards)   (highest-level directory in the SEARCH_DIR path containing a .git subfolder)
 export WH_PROJECT_DIR=""
 export WH_PROJECT_ENV=""
