@@ -1,9 +1,9 @@
 # webhosting-scripts — agent context digest
 
 <!-- CTXMAP:START — managed by refresh-context.sh, do not edit between these markers -->
-**Freshness:** HEAD `0e18f70` · refreshed 2026-09-01T22:04:51Z (deterministic refresh — no LLM, no egress).
+**Freshness:** HEAD `f8b8d75` · refreshed 2026-09-01T22:11:21Z (deterministic refresh — no LLM, no egress).
 
-✅ **In sync** — the digest below reflects the code as of `0e18f70`.
+✅ **In sync** — the digest below reflects the code as of `f8b8d75`.
 <!-- CTXMAP:END -->
 
 Faith FM's `wh` command suite for Laravel Forge / LEMP web-hosting servers. A bash dispatcher
