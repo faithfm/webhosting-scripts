@@ -2,7 +2,7 @@
   "meta": {
     "project": "webhosting-scripts",
     "description": "Faith FM's 'wh' command suite for Laravel Forge / LEMP web-hosting servers: a bash dispatcher that auto-detects site + project context from the filesystem and nginx config, then routes to per-command bash/python scripts covering code deployment, Docker, backups, WordPress database refresh, New Relic deployment markers, and server maintenance.",
-    "node_count": 60,
+    "node_count": 61,
     "groups": {
       "entry": "Entrypoint / dispatcher",
       "deploy": "Deployment commands",
@@ -497,6 +497,14 @@
       "group": "helper",
       "file": "wh-scripts/wh-wp.sh",
       "desc": "Runs wp-cli against the current site under the SITE's own PHP version: execs `$WH_PHP_CMD $WH_WP_PHAR --path=$WH_WEBROOT_DIR \"$@\"`. Matters more than the php/composer wrappers because wp-cli does not talk TO WordPress — it BOOTS the site's WordPress inside its own process, so every plugin, theme, core update-db migration and search-replace pass runs under whichever PHP started the phar. Unlike wh-php/wh-composer it FAILS CLOSED when WH_PHP_CMD is undetected (those run YOUR code under a default interpreter; this runs the SITE's code, where a guess is not a safe default). Also errors when no phar is installed (pointing at wh wp-install) and when the site is not WordPress. Injects --path from the nginx webroot unless the caller supplied one — accepting wp-config.php in or one level above the webroot, both layouts being present on this fleet — and warns when run by an admin account rather than the site's own user.",
+      "trace": "traces/02-deployment-pipeline.md"
+    },
+    {
+      "id": "wh-artisan",
+      "label": "wh-artisan",
+      "group": "helper",
+      "file": "wh-scripts/wh-artisan.sh",
+      "desc": "Runs Laravel artisan for the current project under the SITE's own PHP version: execs `$WH_PHP_CMD $WH_PROJECT_DIR/artisan \"$@\"`. artisan does not talk TO the application — it BOOTS it, so every service provider, queued job and migration executes under whichever PHP started artisan. Like wh-wp — and unlike wh-php/wh-composer — it FAILS CLOSED when WH_PHP_CMD is undetected: 'wh php artisan' warns and falls back to the default CLI PHP, i.e. booting the site's code under an interpreter the site never uses. Invokes artisan by full path, so it works from anywhere inside the project (even public/, where a bare 'php artisan' cannot find the file); the caller's cwd is preserved inside the project tree, and only from outside it (the cwd=$HOME site-auto-detect case) does it cd to the project root — the \"$PWD/\" prefix match is directory-boundary-safe. Errors when the project has no artisan file, and warns when run by an admin account rather than the site's own user, since anything artisan writes (storage/, bootstrap/cache/, the laravel.log) is then owned by that account. Additive: wh-composer-deploy still calls 'wh php artisan'.",
       "trace": "traces/02-deployment-pipeline.md"
     }
   ],
@@ -1065,6 +1073,16 @@
       "s": "wh-wp-install",
       "t": "wp-cli",
       "r": "installs/updates the per-server phar"
+    },
+    {
+      "s": "wh",
+      "t": "wh-artisan",
+      "r": "dispatches"
+    },
+    {
+      "s": "wh-artisan",
+      "t": "php-multi",
+      "r": "boots the Laravel app under site PHP"
     }
   ]
 }

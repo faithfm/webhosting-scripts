@@ -1,9 +1,9 @@
 # webhosting-scripts — agent context digest
 
 <!-- CTXMAP:START — managed by refresh-context.sh, do not edit between these markers -->
-**Freshness:** HEAD `6d5e403` · refreshed 2026-08-25T23:16:29Z (deterministic refresh — no LLM, no egress).
+**Freshness:** HEAD `0e18f70` · refreshed 2026-09-01T22:04:51Z (deterministic refresh — no LLM, no egress).
 
-✅ **In sync** — the digest below reflects the code as of `6d5e403`.
+✅ **In sync** — the digest below reflects the code as of `0e18f70`.
 <!-- CTXMAP:END -->
 
 Faith FM's `wh` command suite for Laravel Forge / LEMP web-hosting servers. A bash dispatcher
@@ -42,7 +42,7 @@ Everything downstream depends on these, all derived in [wh.sh](../wh.sh):
 
 **Entry** `wh.sh`, `wh.bash_completion`, `wh.crond`, `wh.pyenv-profile.d`
 **Deploy** `wh-checkout-{github,PR}.sh`, `wh-composer-deploy{,-sessions}.sh`
-**Helpers** `wh-{php,composer}.sh`, `wh-git.py`, `wh-fpm-reload.sh`, `wh-docker-{get-context,copy-config}.sh`
+**Helpers** `wh-{php,composer,wp,artisan}.sh`, `wh-git.py`, `wh-fpm-reload.sh`, `wh-docker-{get-context,copy-config}.sh`
 **Docker** `wh-docker-{deploy,down,summary}.{sh,py}` + `docker/template *`
 **Backup** `wh-bup*.sh` · **Observability** `wh-nr-deployment-{capture,forward}.py`
 **DB refresh** `wh-db-refresh-{export,import}.sh` + `db-refresh/.wh-db-refresh.sample`
@@ -73,7 +73,10 @@ wh composer-deploy(-sessions)  [sessions: first rm storage/framework/sessions/*]
 **Multi-PHP:** each server runs several PHP versions and the CLI default is often older than a given
 site's. `wh php` / `wh composer` exec `$WH_PHP_CMD` so `vendor/` and composer scripts match the
 runtime the site serves. Both warn to stderr and **fall back to the default** when `WH_PHP_CMD` is
-unset/missing — a silent-wrong-version risk; confirm with `wh show-env`.
+unset/missing — a silent-wrong-version risk; confirm with `wh show-env`. `wh artisan` runs Laravel
+artisan under `$WH_PHP_CMD` too but **fails closed** like `wh wp` below — artisan boots the app
+itself — invoking `$WH_PROJECT_DIR/artisan` by full path, from the caller's cwd when already inside
+the project tree (cd'ing to the project root only from outside it).
 
 **wp-cli:** one current phar per server at `/usr/local/bin/wp` (`root:root`), installed/updated by
 `wh wp-install`; nothing is per-site because wp-cli is version-agnostic toward WP core. `wh wp` execs
@@ -111,6 +114,6 @@ will not deploy.
 
 ## Map files
 
-`audit/graph.json` (58 nodes / 108 edges, `jq`-queryable) · `audit/knowledge-graph.html` (offline viz)
+`audit/graph.json` (61 nodes / 115 edges, `jq`-queryable) · `audit/knowledge-graph.html` (offline viz)
 · `audit/AUDIT.md` (fuller overview) · `audit/traces/` (populated by `/audit-repo`; node `trace`
 fields are empty until then).

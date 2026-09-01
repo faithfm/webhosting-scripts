@@ -58,7 +58,7 @@ classify() {
     wh-scripts/wh-nr-*)                                       g=observability; tr="traces/05-observability-newrelic.md";;
     wh-scripts/wh-update.sh|wh-scripts/wh-update-nvm.sh|wh-scripts/wh-python-update.sh|wh-scripts/wh-git-config.sh) \
                                                               g=platform;      tr="traces/06-platform-install-update.md";;
-    wh-scripts/wh-php.sh|wh-scripts/wh-composer.sh|wh-scripts/wh-wp.sh|wh-scripts/wh-git.py|wh-scripts/wh-fpm-reload.sh) \
+    wh-scripts/wh-php.sh|wh-scripts/wh-composer.sh|wh-scripts/wh-wp.sh|wh-scripts/wh-artisan.sh|wh-scripts/wh-git.py|wh-scripts/wh-fpm-reload.sh) \
                                                               g=helper;        tr="traces/02-deployment-pipeline.md";;
     wh-scripts/wh-show-env.sh|wh-scripts/wh-hello*)           g=diag;          tr="traces/01-dispatcher-and-environment.md";;
     *)                                                        g=external;      tr="";;

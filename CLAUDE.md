@@ -9,7 +9,7 @@ Then, as needed:
 
 | Need | File |
 |---|---|
-| What calls what | [audit/graph.json](audit/graph.json) — 58 nodes / 108 edges, `jq`-queryable |
+| What calls what | [audit/graph.json](audit/graph.json) — 61 nodes / 115 edges, `jq`-queryable |
 | Visual map | [audit/knowledge-graph.html](audit/knowledge-graph.html) — open in a browser (offline) |
 | Fuller architecture + observations | [audit/AUDIT.md](audit/AUDIT.md) |
 | Line-by-line traces | `audit/traces/` — populated by `/audit-repo` |
@@ -43,3 +43,6 @@ bash audit/tools/refresh-context.sh    # update the freshness/drift block in CON
 Both are local-only — no network egress. See [audit/tools/README.md](audit/tools/README.md). After
 substantively editing a script, update its node `desc` in `audit/graph.json` and re-run
 `refresh-context.sh --mark-enriched`.
+
+Map upkeep always lands as its own `Code map: …` commit, separate from the functional change it
+documents — the code commit stays pure, and the pair reads like `7a9542b` → `3fd6d25` in history.
