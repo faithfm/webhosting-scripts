@@ -39,8 +39,10 @@ sudo chown root:root /usr/local/bin/resticprofile
 sudo chmod 755 /usr/local/bin/restic
 sudo chmod 755 /usr/local/bin/resticprofile
 
-echo -e "\nAdding a sudoers profile...  (to allow 'sudo -E resticprofile ...' to work correctly)\n"
-echo "forge ALL=NOPASSWD:SETENV: /usr/local/bin/resticprofile" | sudo tee /etc/sudoers.d/resticprofile
+# No sudoers rule is installed. Granting forge passwordless root for resticprofile with no
+# argument restriction is a forge->root escalation (--config <forge-writable>.yaml runs a
+# run-before hook as root). Scheduled backups run from a root systemd timer and do not need it;
+# the wh bup-* wrappers pass an explicit --config instead of relying on "sudo -E".
 
 # Allow a visual check of the installed binaries
 echo -e "\nConfirming installed binaries in /usr/local/bin/ folder:\n"
