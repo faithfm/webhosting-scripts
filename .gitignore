@@ -17,3 +17,6 @@ venv.bak/
 
 .vscode/settings.json
 .DS_Store
+
+# Local-only context map (knowledge graph, digest, refresh tooling) - never committed
+audit/
