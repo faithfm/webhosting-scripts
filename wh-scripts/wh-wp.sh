@@ -23,7 +23,8 @@
 #   wh wp plugin list --status=active
 #   wh wp search-replace old.example.com new.example.com --dry-run
 #
-# '--path' is supplied automatically from the site's nginx webroot unless you pass your own.
+# '--path' is supplied automatically from the site's nginx webroot unless you pass your own, or the
+# site's own user has a 'path:' in its ~/.wp-cli/config.yml (for a WordPress below the webroot).
 
 fail() { echo "wh wp: ERROR: $*" >&2; exit 1; }
 
@@ -60,6 +61,17 @@ for arg in "$@"; do
         --path|--path=*) inject_path=false; break ;;
     esac
 done
+
+# A site whose WordPress lives BELOW its webroot (attsurvey.adventist.org.au: the webroot serves a
+# React front end, WordPress is htdocs/results) names the real path in its own user's wp-cli config.
+# Injecting the webroot would override that file, so leave --path to wp-cli - but only for the
+# site's own user, and only when that path lies inside THIS site's webroot: forge owns several
+# sites, and a path meant for one must never send 'wh wp' at another (Kedson, 2026-10-27).
+if [[ "$inject_path" == true && "${WH_USER_VALID:-false}" == true && -n "${WH_WEBROOT_DIR:-}" ]]; then
+    cfg_path=$(sed -n 's/^path:[[:space:]]*//p' "${WP_CLI_CONFIG_PATH:-$HOME/.wp-cli/config.yml}" 2>/dev/null \
+        | head -n1 | tr -d "\r\"'")
+    [[ "$cfg_path" == "${WH_WEBROOT_DIR%/}/"* ]] && inject_path=false
+fi
 
 if [[ "$inject_path" == false ]]; then
     exec "$WH_PHP_CMD" "$WH_WP_PHAR" "$@"

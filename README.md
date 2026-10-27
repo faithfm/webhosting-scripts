@@ -75,7 +75,7 @@ Many of these  web-hosting scripts are focused on deploying code updates to webs
 
 > NOTE 4: How to refresh a staging/dev WordPress site's database from a sibling production site (config file, safety model, what the checks mean) see: [db-refresh HOWTO.md](<db-refresh/db-refresh HOWTO.md>)
 
-> NOTE 5: **wp-cli** is one current phar per server (`/usr/local/bin/wp`, owned `root:root`) serving every site; what varies per site is the PHP that *executes* it, which is what `wh wp` resolves.  Unlike `wh php` / `wh composer` it **fails closed** when the site's PHP version cannot be detected.  `wh wp-install` installs or updates the phar - re-running it *is* the updater.  Why, in full: the header comments of [wh-wp.sh](wh-scripts/wh-wp.sh) and [wh-wp-install.sh](wh-scripts/wh-wp-install.sh).
+> NOTE 5: **wp-cli** is one current phar per server (`/usr/local/bin/wp`, owned `root:root`) serving every site; what varies per site is the PHP that *executes* it, which is what `wh wp` resolves.  Unlike `wh php` / `wh composer` it **fails closed** when the site's PHP version cannot be detected.  `wh wp-install` installs or updates the phar - re-running it *is* the updater.  A site whose WordPress lives below its webroot puts `path: <dir>` (a folder inside that webroot) in its own user's `~/.wp-cli/config.yml`; `wh wp` run as that user then leaves `--path` to wp-cli.  Why, in full: the header comments of [wh-wp.sh](wh-scripts/wh-wp.sh) and [wh-wp-install.sh](wh-scripts/wh-wp-install.sh).
 
 
 Bash completion is also included - ie type:
